@@ -28,7 +28,7 @@ add_cv_folds <- function(task, inner_cv = 5L, outer_cv = 5L, ...) {
   dots   <- list(...)
   extras <- c(dots, task_extras[setdiff(names(task_extras), names(dots))])
 
-  cv <- create_cv_folds(task$n_obs, inner_cv, outer_cv, ...)
+  cv <- enfold::create_cv_folds(task$n_obs, inner_cv, outer_cv, ...)
 
   # Store in a reference environment so SL init objects can share without copy
   if (is.null(task$fold_store))
@@ -48,7 +48,6 @@ add_cv_folds <- function(task, inner_cv = 5L, outer_cv = 5L, ...) {
 
   task
 }
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # outcome_folds — per-outcome fold derivation
