@@ -44,7 +44,7 @@ create_table_one <- function(task,
   if (!is.null(stratify) && !is.character(stratify))
     stop("`stratify` must be a character vector of treatment column names.")
   if (use_weights && length(stratify) != 1L)
-    stop("IPW weights are only supported with a single stratification variable.")
+    stop("IPW are only supported with a single stratification variable.")
   if (!is.numeric(few_unique_threshold) || few_unique_threshold < 2L)
     stop("`few_unique_threshold` must be a single integer >= 2.")
   if (!is.numeric(max_strata) || max_strata < 2L)
@@ -54,8 +54,13 @@ create_table_one <- function(task,
   max_strata           <- as.integer(max_strata)
 
   # ── 1. Resolve confounder block ───────────────────────────────────────────
-  conf <- if (is.data.frame(task$confounders)) task$confounders else
-    as.data.frame(task$confounders)
+  data <- task$data_env$data
+  is_df <- is.data.frame(data)
+  conf <- if (is_df) {
+    as.data.frame(data[, task$confounder_cols, drop = FALSE])
+  } else {
+    as.data.frame(data[, task$confounder_cols, drop = FALSE])
+  }
 
   # ── 2. Optionally subset confounders via tidyselect ───────────────────────
   vars_quo <- rlang::enquo(vars)
@@ -146,8 +151,14 @@ create_table_one <- function(task,
   strat_label <- NULL
 
   if (!is.null(stratify)) {
-    trt <- if (is.data.frame(task$treatment)) task$treatment else
-      as.data.frame(task$treatment)
+    trt_col_names <- unlist(lapply(task$treatment_meta, function(m) {
+      vapply(m, function(mi) mi$label_info, character(1L))
+    }))
+    trt <- if (is_df) {
+      as.data.frame(data[, trt_col_names, drop = FALSE])
+    } else {
+      as.data.frame(data[, trt_col_names, drop = FALSE])
+    }
 
     bad_names <- setdiff(stratify, colnames(trt))
     if (length(bad_names))

@@ -2,21 +2,21 @@
 % Please edit documentation in R/cv_helpers.R
 \name{outcome_folds}
 \alias{outcome_folds}
-\title{Derive a enfold_cv with censored observations excluded for a given outcome}
+\title{Derive an enfold_cv with censored observations excluded for a given outcome}
 \usage{
 outcome_folds(cv, task, outcome_name)
 }
 \arguments{
 \item{cv}{A \code{enfold_cv} object.}
 
-\item{task}{A \code{enfold_task} with censoring indicators populated.}
+\item{task}{A \code{nana_task} with censoring indicators populated.}
 
 \item{outcome_name}{Character. Name of the outcome in \code{task$outcomes}.}
 }
 \value{
-A \code{enfold_cv} with censored observations excluded from both
+An \code{enfold_cv} with censored observations excluded from both
 build and performance folds.
 }
 \description{
-Derive a enfold_cv with censored observations excluded for a given outcome
+Derive an enfold_cv with censored observations excluded for a given outcome
 }

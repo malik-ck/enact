@@ -7,7 +7,7 @@
 add_cv_folds(task, inner_cv = 5L, outer_cv = 5L, ...)
 }
 \arguments{
-\item{task}{A \code{enfold_task} object.}
+\item{task}{A \code{nana_task} object.}
 
 \item{inner_cv}{\code{NULL}, a positive integer (number of V-folds), or a
 function with first argument \code{n} returning a list of fold index
@@ -22,7 +22,7 @@ CV.}
 Take precedence over task-derived values.}
 }
 \value{
-The \code{enfold_task} with \code{fold_store} populated.
+The \code{nana_task} with \code{fold_store} populated.
 }
 \description{
 Add cross-validation folds to a study task

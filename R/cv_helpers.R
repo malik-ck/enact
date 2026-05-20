@@ -4,7 +4,7 @@
 
 #' Add cross-validation folds to a study task
 #'
-#' @param task A \code{enfold_task} object.
+#' @param task A \code{nana_task} object.
 #' @param inner_cv \code{NULL}, a positive integer (number of V-folds), or a
 #'   function with first argument \code{n} returning a list of fold index
 #'   sets. Used for inner (ensemble-building) CV. If a function also declares
@@ -14,16 +14,23 @@
 #'   CV.
 #' @param ... Additional named arguments forwarded to custom fold functions.
 #'   Take precedence over task-derived values.
-#' @return The \code{enfold_task} with \code{fold_store} populated.
+#' @return The \code{nana_task} with \code{fold_store} populated.
 #' @export
 add_cv_folds <- function(task, inner_cv = 5L, outer_cv = 5L, ...) {
-  if (!inherits(task, "enfold_task"))
-    stop("`task` must be a enfold_task object.")
+  if (!inherits(task, "nana_task"))
+    stop("`task` must be a nana_task object.")
 
   # Task-level extras forwarded to custom fold functions
   task_extras <- Filter(Negate(is.null), list(
-    cluster = task$cluster,
-    time    = task$time
+    cluster = if (!is.null(task$cluster_cols)) {
+      data_env <- task$data_env
+      if (!is.null(data_env) && exists("data", envir = data_env)) {
+        block <- data_env$data[, task$cluster_cols, drop = FALSE]
+        if (is.data.frame(data_env$data)) as.data.frame(block) else as.matrix(block)
+      }
+    } else {
+      NULL
+    }
   ))
   dots   <- list(...)
   extras <- c(dots, task_extras[setdiff(names(task_extras), names(dots))])
@@ -53,26 +60,28 @@ add_cv_folds <- function(task, inner_cv = 5L, outer_cv = 5L, ...) {
 # outcome_folds — per-outcome fold derivation
 # ══════════════════════════════════════════════════════════════════════════════
 
-#' Derive a enfold_cv with censored observations excluded for a given outcome
+#' Derive an enfold_cv with censored observations excluded for a given outcome
 #'
 #' @param cv A \code{enfold_cv} object.
-#' @param task A \code{enfold_task} with censoring indicators populated.
+#' @param task A \code{nana_task} with censoring indicators populated.
 #' @param outcome_name Character. Name of the outcome in \code{task$outcomes}.
-#' @return A \code{enfold_cv} with censored observations excluded from both
+#' @return An \code{enfold_cv} with censored observations excluded from both
 #'   build and performance folds.
 #' @export
 outcome_folds <- function(cv, task, outcome_name) {
   if (!inherits(cv, "enfold_cv"))
     stop("`cv` must be a enfold_cv object.")
-  if (!inherits(task, "enfold_task"))
-    stop("`task` must be a enfold_task object.")
+  if (!inherits(task, "nana_task"))
+    stop("`task` must be a nana_task object.")
   if (!outcome_name %in% names(task$outcomes))
     stop(sprintf("Outcome '%s' not found in task.", outcome_name))
 
   cens <- task$censoring[[outcome_name]]
   if (is.null(cens)) return(cv)
 
-  censored_idx <- which(cens == 0L)
+  # Censoring is now a data frame (0 = censored, 1 = observed).
+  # A row is censored if ANY censoring column is 0.
+  censored_idx <- which(apply(cens == 0L, 1L, any))
   if (length(censored_idx) == 0L) return(cv)
 
   if (task$verbose) message(sprintf(

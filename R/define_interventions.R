@@ -14,6 +14,18 @@ validate_intervention <- function(task, intervention_name) {
   if (is.null(task$interventions[[intervention_name]]))
     stop(sprintf("Intervention '%s' not found in task.", intervention_name))
 
+  # Extract treatment from data_env for validation
+  data <- task$data_env$data
+  is_df <- is.data.frame(data)
+  trt_col_names <- unlist(lapply(task$treatment_meta, function(m) {
+    vapply(m, function(mi) mi$label_info, character(1L))
+  }))
+  trt <- if (is_df) {
+    as.data.frame(data[, trt_col_names, drop = FALSE])
+  } else {
+    as.matrix(data[, trt_col_names, drop = FALSE])
+  }
+
   result <- tryCatch(
     intervene(task, intervention_name),
     error = function(e) stop(sprintf(
@@ -21,8 +33,6 @@ validate_intervention <- function(task, intervention_name) {
       intervention_name, conditionMessage(e)
     ))
   )
-
-  trt <- task$treatment
 
   # Class check
   trt_class  <- class(trt)[[1L]]
@@ -201,7 +211,27 @@ intervene.nana_task <- function(study, intervention_name) {
 
   get_intervention_function <- study$interventions[[intervention_name]]$intervene
 
-  get_intervention_function(study$treatment, study$confounders)
+  # Extract treatment and confounders from stored data
+  data <- study$data_env$data
+  is_df <- is.data.frame(data)
+
+  # Build treatment block from treatment_meta column names
+  trt_col_names <- unlist(lapply(study$treatment_meta, function(m) {
+    vapply(m, function(mi) mi$label_info, character(1L))
+  }))
+  treatment_block <- if (is_df) {
+    as.data.frame(data[, trt_col_names, drop = FALSE])
+  } else {
+    as.matrix(data[, trt_col_names, drop = FALSE])
+  }
+
+  conf_block <- if (is_df) {
+    as.data.frame(data[, study$confounder_cols, drop = FALSE])
+  } else {
+    as.matrix(data[, study$confounder_cols, drop = FALSE])
+  }
+
+  get_intervention_function(treatment_block, conf_block)
 
 }
 
