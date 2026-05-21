@@ -35,8 +35,8 @@ to be a random function.}
 used in the plug-in step when \code{stochastic = TRUE}. Ignored when
 \code{stochastic = FALSE}. Defaults to 100L.}
 
-\item{label}{Optional character string for display in print methods and
-result tables.}
+\item{label}{Character string.  Display label and identifier used by
+\code{\link{define_interventions}}.  Required.}
 }
 \value{
 An S3 object of class \code{nana_intervention}.

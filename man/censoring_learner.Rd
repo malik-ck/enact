@@ -2,36 +2,28 @@
 % Please edit documentation in R/outcome.R
 \name{censoring_learner}
 \alias{censoring_learner}
-\title{Create a censoring-mechanism learner}
+\title{Define a censoring-mechanism model specification}
 \usage{
-censoring_learner(
-  name,
-  ...,
-  metalearner = NULL,
-  loss_fun = enfold::loss_logistic()
-)
+censoring_learner(learners, metalearner, label = NULL)
 }
 \arguments{
-\item{name}{Character.  Name for this censoring learner.}
+\item{learners}{A list of \code{enfold_learner} objects (e.g.
+\code{lrn_glm()}), or a single learner.  Used to build the SuperLearner
+ensemble for the censoring mechanism model.  Required.}
 
-\item{\dots}{One or more \code{enfold_learner} objects.  Will be stored as
-a list (even if a single learner is passed).}
+\item{metalearner}{An \code{enfold_learner} created by a metalearner
+constructor (e.g. \code{mtl_superlearner()}).  Determines how base
+learner predictions are combined.  Required.}
 
-\item{metalearner}{An \code{enfold_learner} from a metalearner constructor
-(e.g. \code{mtl_superlearner()}).  Determines how the base learner
-predictions are combined.  Defaults to
-\code{mtl_superlearner("sl")} with \code{loss_logistic()}.}
-
-\item{loss_fun}{An \code{mtl_loss} object used for the metalearner.
-Defaults to \code{loss_logistic()}.}
+\item{label}{Optional character string.  Display label for this censoring
+learner.}
 }
 \value{
-An S3 object of class \code{enact_censoring_learner} (inherits
-\code{enfold_learner}).
+An S3 object of class \code{enact_censoring_learner}.
 }
 \description{
-Wraps one or more \code{enfold_learner} objects into a metalearner ensemble
-that models the censoring indicator (probability of being observed) for an
-outcome.  This is conceptually identical to a treatment model, but applied
-to the censoring variable.
+Constructs an \code{enact_censoring_learner} object that specifies the
+learners and metalearner for modeling the censoring indicator of an outcome.
+Passed to \code{\link{add}} alongside the matching \code{\link{outcome}} to
+override the default censoring model.
 }

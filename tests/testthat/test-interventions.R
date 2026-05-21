@@ -18,7 +18,7 @@ mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add_outcomes(task,
+  add(task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl)
   )
@@ -128,40 +128,38 @@ test_that("define_interventions() stores interventions on task", {
   task <- make_task()
   task <- define_interventions(
     task,
-    control = intervention_arm("A", label = "Control"),
-    treat   = intervention_arm("A", label = "Treat")
+    intervention_arm("A", label = "Control"),
+    intervention_arm("A", label = "Treat")
   )
 
   expect_true(!is.null(task$interventions))
-  expect_true("control" %in% names(task$interventions))
-  expect_true("treat" %in% names(task$interventions))
-  expect_true(task$intervention_matrix["A", "control"])
-  expect_true(task$intervention_matrix["A", "treat"])
+  expect_true("Control" %in% names(task$interventions))
+  expect_true("Treat" %in% names(task$interventions))
 })
 
-test_that("define_interventions() errors on unnamed arguments", {
+test_that("define_interventions() errors on missing label", {
   task <- make_task()
   expect_error(
-    define_interventions(task, intervention_arm("A")),
-    "must be named"
+    intervention(intervene = function(a, l) a, mtp = FALSE, stochastic = FALSE),
+    "label"
   )
 })
 
 test_that("define_interventions() errors on non-intervention objects", {
   task <- make_task()
   expect_error(
-    define_interventions(task, arm1 = "not_an_intervention"),
-    "nana_intervention"
+    define_interventions(task, "not_an_intervention"),
+    "not valid intervention"
   )
 })
 
 test_that("define_interventions() errors on no treatment", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  # No add_outcomes => no treatment_meta
-  task <- add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
+  # No add() => no treatment_meta
+  task <- add(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
   expect_error(
-    define_interventions(task, arm1 = intervention_arm("A")),
+    define_interventions(task, intervention_arm("A", label = "Arm")),
     "No treatment variables"
   )
 })
@@ -171,20 +169,20 @@ test_that("define_interventions() warns on unknown columns", {
   expect_warning(
     define_interventions(
       task,
-      arm1 = intervention(intervene = function(a, l) {
+      intervention(intervene = function(a, l) {
         a[, "nonexistent"] <- 1
         a
-      }, mtp = FALSE, stochastic = FALSE)
+      }, mtp = FALSE, stochastic = FALSE, label = "Bad col")
     ),
     "not found in the treatment block"
   )
 })
 
-test_that("define_interventions() errors on duplicate names", {
+test_that("define_interventions() errors on duplicate labels", {
   task <- make_task()
-  task <- define_interventions(task, arm1 = intervention_arm("A"))
+  task <- define_interventions(task, intervention_arm("A", label = "Arm"))
   expect_error(
-    define_interventions(task, arm1 = intervention_arm("A")),
+    define_interventions(task, intervention_arm("A", label = "Arm")),
     "already exist"
   )
 })
@@ -195,8 +193,8 @@ test_that("define_interventions() errors on duplicate names", {
 
 test_that("intervene() returns modified treatment block", {
   task <- make_task()
-  task <- define_interventions(task, arm1 = intervention_arm("A"))
-  result <- intervene(task, "arm1")
+  task <- define_interventions(task, intervention_arm("A", label = "Arm A"))
+  result <- intervene(task, "Arm A")
 
   expect_true(is.matrix(result) || is.data.frame(result))
   expect_equal(nrow(result), task$n_obs)
@@ -205,11 +203,11 @@ test_that("intervene() returns modified treatment block", {
 
 test_that("intervene() errors without interventions", {
   task <- make_task()
-  expect_error(intervene(task, "arm1"), "No interventions found")
+  expect_error(intervene(task, "Arm A"), "No interventions found")
 })
 
 test_that("intervene() errors on missing intervention name", {
   task <- make_task()
-  task <- define_interventions(task, arm1 = intervention_arm("A"))
+  task <- define_interventions(task, intervention_arm("A", label = "Arm A"))
   expect_error(intervene(task, "nonexistent"), "Intervention not found")
 })

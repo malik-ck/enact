@@ -27,5 +27,5 @@ An S3 object of class \code{enact_treatment}.
 \description{
 Constructs an \code{enact_treatment} object that describes a single
 treatment.  The column selection is captured unevaluated (via tidyselect /
-quosure semantics) and resolved later by \code{\link{add_outcomes}}.
+quosure semantics) and resolved later by \code{\link{add}}.
 }

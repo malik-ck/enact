@@ -4,7 +4,11 @@
 \alias{stochastic_intervention}
 \title{Stochastic MTP intervention: draw treatment from a shifted distribution}
 \usage{
-stochastic_intervention(draw_fn, n_draws = 100L, label = NULL)
+stochastic_intervention(
+  draw_fn,
+  n_draws = 100L,
+  label = sprintf("Stochastic MTP (M = \%d)", n_draws)
+)
 }
 \arguments{
 \item{draw_fn}{A function \code{function(a, l)} returning one random draw

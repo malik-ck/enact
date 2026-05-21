@@ -4,7 +4,7 @@
 \alias{mtp_intervention}
 \title{MTP intervention: shift treatment as a deterministic function of (a, l)}
 \usage{
-mtp_intervention(shift_fn, label = NULL)
+mtp_intervention(shift_fn, label = "MTP intervention")
 }
 \arguments{
 \item{shift_fn}{A function \code{function(a, l)} returning the shifted

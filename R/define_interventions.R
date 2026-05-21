@@ -97,8 +97,8 @@ validate_intervention <- function(task, intervention_name) {
 #' @param n_draws Positive integer. Number of Monte Carlo draws per observation
 #'   used in the plug-in step when \code{stochastic = TRUE}. Ignored when
 #'   \code{stochastic = FALSE}. Defaults to 100L.
-#' @param label Optional character string for display in print methods and
-#'   result tables.
+#' @param label Character string.  Display label and identifier used by
+#'   \code{\link{define_interventions}}.  Required.
 #'
 #' @return An S3 object of class \code{nana_intervention}.
 #' @export
@@ -117,8 +117,8 @@ intervention <- function(intervene,
     stop("`mtp` must be a single logical value.")
   if (!is.logical(stochastic) || length(stochastic) != 1L)
     stop("`stochastic` must be a single logical value.")
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L))
-    stop("`label` must be a single character string or NULL.")
+  if (is.null(label) || !is.character(label) || length(label) != 1L)
+    stop("`label` must be a single character string.")
   if (stochastic) {
     if (!is.numeric(n_draws) || length(n_draws) != 1L || n_draws < 1L)
       stop("`n_draws` must be a positive integer when `stochastic = TRUE`.")
@@ -148,29 +148,60 @@ define_interventions <- function(task, ...) {
 
   if (length(interventions) == 0L)
     stop("At least one intervention must be provided.")
-  if (is.null(names(interventions)) || any(names(interventions) == ""))
-    stop("All interventions must be named.")
 
   bad <- !vapply(interventions, inherits, logical(1L), "nana_intervention")
-  if (any(bad))
+  if (any(bad)) {
+    indices <- which(bad)
     stop(sprintf(
-      "The following are not valid intervention objects: %s\n%s",
-      paste(names(interventions)[bad], collapse = ", "),
-      "Use intervention(), or a wrapper like intervention_static()."
+      "Argument(s) %s are not valid intervention objects.\n%s",
+      paste(indices, collapse = ", "),
+      "Use intervention(), or a wrapper like static_intervention()."
     ))
+  }
 
-  # Propagate argument name as label if none was set
-  interventions <- lapply(names(interventions), function(nm) {
-    obj <- interventions[[nm]]
-    if (is.null(obj$label)) obj$label <- nm
-    obj
-  })
-  names(interventions) <- names(list(...))
+  # Each intervention must have a label
+  labels <- vapply(interventions, function(obj) {
+    if (is.null(obj$label) || !is.character(obj$label) || length(obj$label) != 1L)
+      NA_character_
+    else
+      obj$label
+  }, character(1L))
 
-  task$interventions <- interventions
+  missing_label <- is.na(labels)
+  if (any(missing_label)) {
+    stop(sprintf(
+      "Intervention(s) %s have no label set. All interventions must have a label.",
+      paste(which(missing_label), collapse = ", ")
+    ), call. = FALSE)
+  }
+
+  # Check for duplicate labels
+  dupes <- labels[duplicated(labels)]
+  if (length(dupes)) {
+    stop(sprintf(
+      "Duplicate intervention labels: %s",
+      paste(unique(dupes), collapse = ", ")
+    ), call. = FALSE)
+  }
+
+  # Check for conflicts with existing interventions
+  if (!is.null(task$interventions)) {
+    existing <- names(task$interventions)
+    overlap <- intersect(labels, existing)
+    if (length(overlap)) {
+      stop(sprintf(
+        "Intervention label(s) already exist in task: %s",
+        paste(overlap, collapse = ", ")
+      ), call. = FALSE)
+    }
+  }
+
+  # Store by label
+  names(interventions) <- labels
+  task$interventions <- c(task$interventions, interventions)
 
   # Validate interventions
-  for (nm in names(interventions)) validate_intervention(task, nm)
+  for (lab in labels) validate_intervention(task, lab)
 
   task
 }
@@ -288,7 +319,7 @@ static_intervention <- function(value, label = NULL) {
 #'   treatment value.
 #' @param label Optional display label.
 #' @export
-mtp_intervention <- function(shift_fn, label = NULL) {
+mtp_intervention <- function(shift_fn, label = "MTP intervention") {
   if (!is.function(shift_fn))
     stop("`shift_fn` must be a function.")
   intervention(
@@ -307,7 +338,8 @@ mtp_intervention <- function(shift_fn, label = NULL) {
 #'   step. Defaults to 100L.
 #' @param label Optional display label.
 #' @export
-stochastic_intervention <- function(draw_fn, n_draws = 100L, label = NULL) {
+stochastic_intervention <- function(draw_fn, n_draws = 100L,
+                                    label = sprintf("Stochastic MTP (M = %d)", n_draws)) {
   if (!is.function(draw_fn))
     stop("`draw_fn` must be a function.")
   intervention(
@@ -329,7 +361,8 @@ stochastic_intervention <- function(draw_fn, n_draws = 100L, label = NULL) {
 #'   step. Defaults to 100L.
 #' @param label Optional display label.
 #' @export
-pure_stochastic_intervention <- function(draw_fn, n_draws = 100L, label = NULL) {
+pure_stochastic_intervention <- function(draw_fn, n_draws = 100L,
+                                         label = sprintf("Pure stochastic (M = %d)", n_draws)) {
   if (!is.function(draw_fn))
     stop("`draw_fn` must be a function.")
   intervention(

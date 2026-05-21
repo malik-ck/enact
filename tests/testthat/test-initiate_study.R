@@ -128,13 +128,13 @@ test_that("outcome() rejects non-string label", {
 })
 
 # ══════════════════════════════════════════════════════════════════════════════
-# add_outcomes()
+# add()
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("add_outcomes() attaches treatment to task", {
+test_that("add() attaches treatment to task", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(task, A = treatment(A, learners = lrn, metalearner = mtl, label = "Arm A"))
+  task <- add(task, A = treatment(A, learners = lrn, metalearner = mtl, label = "Arm A"))
 
   expect_true(!is.null(task$treatment_meta))
   expect_true("A" %in% names(task$treatment_meta))
@@ -144,10 +144,10 @@ test_that("add_outcomes() attaches treatment to task", {
   expect_equal(task$treatment_labels[["A"]], "Arm A")
 })
 
-test_that("add_outcomes() attaches outcome to task", {
+test_that("add() attaches outcome to task", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(task,
+  task <- add(task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, label = "My Y")
   )
@@ -158,62 +158,62 @@ test_that("add_outcomes() attaches outcome to task", {
   expect_true("Y" %in% names(task$outcome_specs))
 })
 
-test_that("add_outcomes() with adjustment_set", {
+test_that("add() with adjustment_set", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl, adjustment_set = "X1"))
+  task <- add(task, Y = outcome(Y, learners = lrn, metalearner = mtl, adjustment_set = "X1"))
 
   expect_equal(task$adjustment_sets[["Y"]], 1L)
 })
 
-test_that("add_outcomes() NULL adjustment_set inherits all confounders", {
+test_that("add() NULL adjustment_set inherits all confounders", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
+  task <- add(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
 
   expect_true(is.null(task$adjustment_sets[["Y"]]))
 })
 
-test_that("add_outcomes() errors on unnamed arguments", {
+test_that("add() errors on unnamed arguments", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  expect_error(add_outcomes(task, treatment(A, learners = lrn, metalearner = mtl)), "must be named")
+  expect_error(add(task, treatment(A, learners = lrn, metalearner = mtl)), "must be named")
 })
 
-test_that("add_outcomes() errors on duplicate treatment names", {
+test_that("add() errors on duplicate treatment names", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(task, A = treatment(A, learners = lrn, metalearner = mtl))
-  expect_error(add_outcomes(task, A = treatment(A, learners = lrn, metalearner = mtl)), "already exist")
+  task <- add(task, A = treatment(A, learners = lrn, metalearner = mtl))
+  expect_error(add(task, A = treatment(A, learners = lrn, metalearner = mtl)), "already exist")
 })
 
-test_that("add_outcomes() errors on duplicate outcome names", {
+test_that("add() errors on duplicate outcome names", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
-  expect_error(add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl)), "already exist")
+  task <- add(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
+  expect_error(add(task, Y = outcome(Y, learners = lrn, metalearner = mtl)), "already exist")
 })
 
-test_that("add_outcomes() errors on non-treatment/outcome objects", {
+test_that("add() errors on non-treatment/outcome objects", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  expect_error(add_outcomes(task, A = "not_a_constructor"), "not treatment")
+  expect_error(add(task, A = "not_a_constructor"), "not treatment")
 })
 
-test_that("add_outcomes() errors on treatment-outcome column overlap", {
+test_that("add() errors on treatment-outcome column overlap", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(task, A = treatment(A, learners = lrn, metalearner = mtl))
+  task <- add(task, A = treatment(A, learners = lrn, metalearner = mtl))
   expect_error(
-    add_outcomes(task, Y = outcome(A, learners = lrn, metalearner = mtl)),
+    add(task, Y = outcome(A, learners = lrn, metalearner = mtl)),
     "also appear in treatment"
   )
 })
 
-test_that("add_outcomes() with both treatment and outcome in one call", {
+test_that("add() with both treatment and outcome in one call", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl, label = "Arm"),
     Y = outcome(Y, learners = lrn, metalearner = mtl, label = "Response")
@@ -222,11 +222,11 @@ test_that("add_outcomes() with both treatment and outcome in one call", {
   expect_true("Y" %in% names(task$outcomes))
 })
 
-test_that("add_outcomes() incremental: treatment first, outcomes later", {
+test_that("add() incremental: treatment first, outcomes later", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(task, A = treatment(A, learners = lrn, metalearner = mtl))
-  task <- add_outcomes(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
+  task <- add(task, A = treatment(A, learners = lrn, metalearner = mtl))
+  task <- add(task, Y = outcome(Y, learners = lrn, metalearner = mtl))
 
   expect_true("A" %in% names(task$treatment_meta))
   expect_true("Y" %in% names(task$outcomes))
@@ -239,7 +239,7 @@ test_that("add_outcomes() incremental: treatment first, outcomes later", {
 test_that("print.nana_task works without error", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add_outcomes(task,
+  task <- add(task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl)
   )

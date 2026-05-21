@@ -6,7 +6,11 @@
 natural treatment value. Density ratio estimated directly from propensity
 score model rather than via the 2n classification approach.}
 \usage{
-pure_stochastic_intervention(draw_fn, n_draws = 100L, label = NULL)
+pure_stochastic_intervention(
+  draw_fn,
+  n_draws = 100L,
+  label = sprintf("Pure stochastic (M = \%d)", n_draws)
+)
 }
 \arguments{
 \item{draw_fn}{A function \code{function(a, l)} returning one random draw

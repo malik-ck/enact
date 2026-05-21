@@ -18,7 +18,7 @@ mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add_outcomes(task,
+  add(task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl)
   )

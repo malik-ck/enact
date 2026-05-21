@@ -24,7 +24,7 @@ test_that("auto-detect creates censoring indicator from outcome NAs", {
   d$Y[c(2, 5, 10)] <- NA
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, label = "Y")
@@ -39,7 +39,7 @@ test_that("auto-detect creates censoring indicator from outcome NAs", {
 test_that("no censoring created when outcome has no NAs", {
   d <- make_data(50L)
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(task,
+  task <- add(task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl)
   )
@@ -52,13 +52,13 @@ test_that("no censoring created when outcome has no NAs", {
 # Manual censoring via outcome(censoring = ...)
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("manual censoring column is picked up by add_outcomes", {
+test_that("manual censoring column is picked up by add()", {
   d <- make_data(50L)
   d$C <- 1L
   d$C[c(3, 7)] <- 0L
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
@@ -76,7 +76,7 @@ test_that("manual censoring suppresses auto-detect (no remaining NAs)", {
   # No NAs in Y
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
@@ -97,7 +97,7 @@ test_that("auto-detect fills gaps when manual censoring misses NAs", {
   d$Y[8] <- NA
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
@@ -116,7 +116,7 @@ test_that("manual censoring: non-existent column name errors", {
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   expect_error(
-    add_outcomes(
+    add(
       task,
       A = treatment(A, learners = lrn, metalearner = mtl),
       Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = NonExistent)
@@ -132,7 +132,7 @@ test_that("manual censoring via column index", {
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   # C is column 7 in d (X1, X2, A, Y, Z, cl, C)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = 7, label = "Y")
@@ -149,7 +149,7 @@ test_that("censoring stored as integer vector, not data.frame", {
   d$C[5] <- 0L
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
@@ -166,7 +166,7 @@ test_that("censoring values outside {0, 1} produce an error", {
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   expect_error(
-    add_outcomes(
+    add(
       task,
       A = treatment(A, learners = lrn, metalearner = mtl),
       Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C)
@@ -180,7 +180,7 @@ test_that("print shows censored count", {
   d$Y[c(1, 2)] <- NA
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_outcomes(
+  task <- add(
     task,
     A = treatment(A, learners = lrn, metalearner = mtl),
     Y = outcome(Y, learners = lrn, metalearner = mtl)

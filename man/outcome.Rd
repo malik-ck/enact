@@ -45,5 +45,5 @@ An S3 object of class \code{enact_outcome}.
 \description{
 Constructs an \code{enact_outcome} object that describes a single study
 outcome.  Selections are captured unevaluated (via tidyselect / quosure
-semantics) and resolved later by \code{\link{add_outcomes}}.
+semantics) and resolved later by \code{\link{add}}.
 }

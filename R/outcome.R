@@ -6,7 +6,7 @@
 #'
 #' Constructs an \code{enact_treatment} object that describes a single
 #' treatment.  The column selection is captured unevaluated (via tidyselect /
-#' quosure semantics) and resolved later by \code{\link{add_outcomes}}.
+#' quosure semantics) and resolved later by \code{\link{add}}.
 #'
 #' @param which <[`tidyselect`][tidyselect::language]> Treatment column(s) in
 #'   the study data.  Also accepts a character vector of column names or an
@@ -64,7 +64,7 @@ print.enact_treatment <- function(x, ...) {
 #'
 #' Constructs an \code{enact_outcome} object that describes a single study
 #' outcome.  Selections are captured unevaluated (via tidyselect / quosure
-#' semantics) and resolved later by \code{\link{add_outcomes}}.
+#' semantics) and resolved later by \code{\link{add}}.
 #'
 #' @param which <[`tidyselect`][tidyselect::language]> Outcome column(s) in the
 #'   study data.  Also accepts a character vector of column names or an integer
@@ -141,67 +141,60 @@ print.enact_outcome <- function(x, ...) {
 # censoring_learner() constructor
 # ══════════════════════════════════════════════════════════════════════════════
 
-#' Create a censoring-mechanism learner
+#' Define a censoring-mechanism model specification
 #'
-#' Wraps one or more \code{enfold_learner} objects into a metalearner ensemble
-#' that models the censoring indicator (probability of being observed) for an
-#' outcome.  This is conceptually identical to a treatment model, but applied
-#' to the censoring variable.
+#' Constructs an \code{enact_censoring_learner} object that specifies the
+#' learners and metalearner for modeling the censoring indicator of an outcome.
+#' Passed to \code{\link{add}} alongside the matching \code{\link{outcome}} to
+#' override the default censoring model.
 #'
-#' @param name Character.  Name for this censoring learner.
-#' @param \dots One or more \code{enfold_learner} objects.  Will be stored as
-#'   a list (even if a single learner is passed).
-#' @param metalearner An \code{enfold_learner} from a metalearner constructor
-#'   (e.g. \code{mtl_superlearner()}).  Determines how the base learner
-#'   predictions are combined.  Defaults to
-#'   \code{mtl_superlearner("sl")} with \code{loss_logistic()}.
-#' @param loss_fun An \code{mtl_loss} object used for the metalearner.
-#'   Defaults to \code{loss_logistic()}.
+#' @param learners A list of \code{enfold_learner} objects (e.g.
+#'   \code{lrn_glm()}), or a single learner.  Used to build the SuperLearner
+#'   ensemble for the censoring mechanism model.  Required.
+#' @param metalearner An \code{enfold_learner} created by a metalearner
+#'   constructor (e.g. \code{mtl_superlearner()}).  Determines how base
+#'   learner predictions are combined.  Required.
+#' @param label Optional character string.  Display label for this censoring
+#'   learner.
 #'
-#' @return An S3 object of class \code{enact_censoring_learner} (inherits
-#'   \code{enfold_learner}).
+#' @return An S3 object of class \code{enact_censoring_learner}.
 #' @export
 censoring_learner <- function(
-  name,
-  ...,
-  metalearner = NULL,
-  loss_fun = enfold::loss_logistic()
+  learners,
+  metalearner,
+  label = NULL
 ) {
-  if (!is.character(name) || length(name) != 1L) {
-    stop("`name` must be a single character string.", call. = FALSE)
+  if (!is.null(label) && (!is.character(label) || length(label) != 1L)) {
+    stop("`label` must be a single character string or NULL.", call. = FALSE)
   }
-
-  learners <- list(...)
-  if (length(learners) == 0L) {
-    stop("At least one enfold_learner must be provided via `...`.", call. = FALSE)
-  }
-
-  if (is.null(metalearner)) {
-    metalearner <- enfold::mtl_superlearner("sl", loss_fun = loss_fun)
+  # Wrap single learner/pipeline objects in a list.
+  if (!is.null(learners) && (inherits(learners, "enfold_learner") ||
+                              inherits(learners, "enfold_pipeline"))) {
+    learners <- list(learners)
   }
 
   structure(
     list(
-      name        = name,
       learners    = learners,
       metalearner = metalearner,
-      loss_fun    = loss_fun
+      label       = label
     ),
-    class = c("enact_censoring_learner", "enfold_learner")
+    class = "enact_censoring_learner"
   )
 }
 
 #' @export
 print.enact_censoring_learner <- function(x, ...) {
-  lrn_names <- vapply(x$learners, function(l) l$name %||% "?", character(1L))
-  cat(sprintf("enact_censoring_learner | %s | %s\n",
-              x$name, paste(lrn_names, collapse = ", ")))
+  lab <- if (!is.null(x$label)) x$label else "(unlabelled)"
+  n_learners <- if (!is.null(x$learners)) length(x$learners) else 0L
+  cat(sprintf("enact_censoring_learner | %s | %d learner(s)\n",
+              lab, n_learners))
   invisible(x)
 }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# add_outcomes() — S3 generic + nana_task method
+# add() — S3 generic + nana_task method
 # ══════════════════════════════════════════════════════════════════════════════
 
 #' Add components to a study task
@@ -215,18 +208,20 @@ print.enact_censoring_learner <- function(x, ...) {
 #'   treatment or outcome name in the task.
 #' @return The modified task.
 #' @export
-add_outcomes <- function(task, ...) {
-  UseMethod("add_outcomes")
+add <- function(task, ...) {
+  UseMethod("add")
 }
 
 
-#' Add treatments and/or outcomes to a nana_task
+#' Add treatments, outcomes, and/or censoring learners to a nana_task
 #'
-#' Each argument must be an \code{enact_treatment} or \code{enact_outcome}
-#' object.  Argument names become the treatment or outcome names in the task.
+#' Each argument must be an \code{enact_treatment}, \code{enact_outcome}, or
+#' \code{enact_censoring_learner} object.  Argument names become the treatment
+#' or outcome names in the task.
 #'
 #' @param task A \code{nana_task} object.
-#' @param \dots Named \code{\link{treatment}} or \code{\link{outcome}} objects.
+#' @param \dots Named \code{\link{treatment}}, \code{\link{outcome}}, or
+#'   \code{\link{censoring_learner}} objects.
 #' @return The modified \code{nana_task}.
 #'
 #' @details
@@ -252,29 +247,36 @@ add_outcomes <- function(task, ...) {
 #' If a \code{learners} list is provided in the outcome, an \code{enfold}
 #' sub-task is also created for the outcome regression.
 #'
+#' \strong{Censoring learners} override the default censoring model
+#' specification for a named outcome.  When a \code{censoring_learner} is
+#' provided with the same name as an outcome, its learners and metalearner are
+#' used instead of the outcome's defaults.
+#'
 #' @export
-add_outcomes.nana_task <- function(task, ...) {
+add.nana_task <- function(task, ...) {
   # ── Capture and classify dots ─────────────────────────────────────────────
   dots <- list(...)
   if (length(dots) == 0L) {
-    stop("At least one treatment() or outcome() object must be provided.", call. = FALSE)
+    stop("At least one treatment(), outcome(), or censoring_learner() object must be provided.", call. = FALSE)
   }
   if (is.null(names(dots)) || any(names(dots) == "")) {
-    stop("All arguments must be named (e.g. add_outcomes(task, A = treatment(...))).", call. = FALSE)
+    stop("All arguments must be named (e.g. add(task, A = treatment(...))).", call. = FALSE)
   }
 
-  is_trt <- vapply(dots, inherits, logical(1L), "enact_treatment")
-  is_out <- vapply(dots, inherits, logical(1L), "enact_outcome")
-  bad <- !is_trt & !is_out
+  is_trt   <- vapply(dots, inherits, logical(1L), "enact_treatment")
+  is_out   <- vapply(dots, inherits, logical(1L), "enact_outcome")
+  is_cens  <- vapply(dots, inherits, logical(1L), "enact_censoring_learner")
+  bad <- !is_trt & !is_out & !is_cens
   if (any(bad)) {
     stop(sprintf(
-      "The following arguments are not treatment() or outcome() objects: %s",
+      "The following arguments are not treatment(), outcome(), or censoring_learner() objects: %s",
       paste(names(dots)[bad], collapse = ", ")
     ), call. = FALSE)
   }
 
-  treatments <- dots[is_trt]
-  outcomes    <- dots[is_out]
+  treatments        <- dots[is_trt]
+  outcomes          <- dots[is_out]
+  censoring_learners <- dots[is_cens]
 
   # ── Duplicate-name check ──────────────────────────────────────────────────
   if (!is.null(task$treatment_meta)) {
@@ -643,21 +645,25 @@ add_outcomes.nana_task <- function(task, ...) {
 
     # --- Build censoring enfold sub-task (if censoring exists) ---
     if (!is.null(cens_vec)) {
+      # Use matching censoring_learner if provided, otherwise fall back to
+      # the outcome's own learners.
+      c_learner <- censoring_learners[[nm]]
+      c_learners    <- if (!is.null(c_learner)) c_learner$learners else oc$learners
+      c_metalearner <- if (!is.null(c_learner)) c_learner$metalearner else oc$metalearner
+
       etask_cens <- enfold::initialize_enfold(
         conf_data,
         cens_vec
       )
 
-      # Add base learners from the outcome spec (if any)
-      if (!is.null(oc$learners)) {
-        for (lrn in oc$learners) {
+      if (!is.null(c_learners)) {
+        for (lrn in c_learners) {
           etask_cens <- enfold::add_learners(etask_cens, lrn)
         }
       }
 
-      # Add metalearner (default to superlearner with binomial loss)
-      if (!is.null(oc$metalearner)) {
-        etask_cens <- enfold::add_metalearners(etask_cens, oc$metalearner)
+      if (!is.null(c_metalearner)) {
+        etask_cens <- enfold::add_metalearners(etask_cens, c_metalearner)
       } else {
         etask_cens <- enfold::add_metalearners(etask_cens,
           enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic()))
@@ -665,9 +671,20 @@ add_outcomes.nana_task <- function(task, ...) {
 
       new_censoring_tasks[[nm]] <- etask_cens
       new_censoring_specs[[nm]] <- list(
-        learners    = oc$learners,
-        metalearner = oc$metalearner %||% enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
+        learners    = c_learners,
+        metalearner = c_metalearner %||% enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
       )
+    }
+  }
+
+  # ── Validate censoring_learner names against outcomes ─────────────────────
+  if (length(censoring_learners)) {
+    unmatched <- setdiff(names(censoring_learners), names(outcomes))
+    if (length(unmatched)) {
+      stop(sprintf(
+        "censoring_learner(s) '%s' do not match any outcome in this call.",
+        paste(unmatched, collapse = ", ")
+      ), call. = FALSE)
     }
   }
 

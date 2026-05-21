@@ -2,7 +2,7 @@
 #'
 #' Creates the base \code{nana_task} scaffold that holds study data, confounders,
 #' and optionally cluster variables.  Treatments and outcomes are added later via
-#' \code{\link{add_outcomes}} with \code{\link{treatment}} and \code{\link{outcome}}
+#' \code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
 #' constructors.
 #'
 #' @param data A \code{data.frame} or \code{matrix} containing all study
@@ -177,7 +177,7 @@ initiate_study <- function(
       cluster_cols = cluster_cols,
       cluster_labels = resolved_cluster_labels,
 
-      # Populated by add_outcomes()
+      # Populated by add()
       treatment_meta = NULL,
       treatment_labels = NULL,
 
@@ -186,12 +186,12 @@ initiate_study <- function(
       adjustment_sets = NULL,
       censoring = NULL,
 
-      # Enfold sub-tasks — populated by add_outcomes()
+      # Enfold sub-tasks — populated by add()
       treatment_tasks = NULL,
       outcome_tasks = NULL,
       censoring_tasks = NULL,
 
-      # Specs (learners + metalearners) — populated by add_outcomes()
+      # Specs (learners + metalearners) — populated by add()
       treatment_specs = NULL,
       outcome_specs = NULL,
       censoring_specs = NULL,
@@ -218,14 +218,14 @@ print.nana_task <- function(x, ...) {
   # Treatments
   cat("  Treatments\n")
   if (is.null(x$treatment_meta)) {
-    cat("    \u00b7 (none \u2014 use add_outcomes())\n")
+    cat("    \u00b7 (none \u2014 use add())\n")
   } else {
     type_tag <- function(type) {
       switch(type, binary = "[binary]", numerical = "[numerical]", sprintf("[%s]", type))
     }
     for (nm in names(x$treatment_meta)) {
       m <- x$treatment_meta[[nm]]
-      # Handle nested format (from add_outcomes): list(col = list(type=...))
+      # Handle nested format (from add): list(col = list(type=...))
       # vs flat format: list(type=..., label_info=...)
       if (!is.null(m$type)) {
         cat(sprintf(
@@ -249,7 +249,7 @@ print.nana_task <- function(x, ...) {
   # Outcomes
   cat("  Outcomes\n")
   if (is.null(x$outcomes)) {
-    cat("    \u00b7 (none \u2014 use add_outcomes())\n")
+    cat("    \u00b7 (none \u2014 use add())\n")
   } else {
     for (nm in names(x$outcomes)) {
       y <- x$outcomes[[nm]]

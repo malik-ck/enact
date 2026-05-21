@@ -45,6 +45,6 @@ An S3 object of class \code{nana_task}.
 \description{
 Creates the base \code{nana_task} scaffold that holds study data, confounders,
 and optionally cluster variables.  Treatments and outcomes are added later via
-\code{\link{add_outcomes}} with \code{\link{treatment}} and \code{\link{outcome}}
+\code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
 constructors.
 }
