@@ -24,9 +24,6 @@ make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv, verbose = FALSE)
 }
 
-test_data <- make_data(n = 10000L) %>% mutate(clust = as.character(round(runif(nrow(.), 1L, 30L))))
-test_task <- initiate_study(test_data, confounders = X1, verbose = TRUE, cluster = clust)
-
 # ══════════════════════════════════════════════════════════════════════════════
 # define_interventions() now populates intervened_data
 # ══════════════════════════════════════════════════════════════════════════════
