@@ -1,6 +1,6 @@
 #' Initiate a causal inference study task
 #'
-#' Creates the base \code{nana_task} scaffold that holds study data, confounders,
+#' Creates the base \code{enact_task} scaffold that holds study data, confounders,
 #' and optionally cluster variables.  Treatments and outcomes are added later via
 #' \code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
 #' constructors.
@@ -11,11 +11,10 @@
 #'   set.  Also accepts a character vector of column names or an integer index
 #'   vector.  Stored as column name references (no data extraction).
 #' @param cluster <[`tidyselect`][tidyselect::language]> Optional cluster
-#'   variable(s).  Also accepts a character vector of column names orn integer
-#'   index vector.
+#'   variable. Also accepts a character value or an integer index.
 #' @param confounder_labels Optional character vector of display labels for
 #'   confounder columns.  Named: matched by column name.  Unnamed: positional.
-#' @param cluster_labels Optional character vector of display labels for
+#' @param cluster_label Optional character vector of display labels for
 #'   cluster columns.  Named or unnamed (positional).
 #' @param extra_vars Optional named list of arbitrary objects to be carried in
 #'   the task and made available to downstream functions (e.g. penalty matrices,
@@ -23,14 +22,14 @@
 #' @param verbose Logical.  If \code{TRUE} (default), pipeline functions emit
 #'   informational messages.
 #'
-#' @return An S3 object of class \code{nana_task}.
+#' @return An S3 object of class \code{enact_task}.
 #' @export
 initiate_study <- function(
   data,
   confounders,
   cluster = NULL,
   confounder_labels = NULL,
-  cluster_labels = NULL,
+  cluster_label = NULL,
   extra_vars = NULL,
   verbose = TRUE
 ) {
@@ -121,7 +120,7 @@ initiate_study <- function(
 
   # ── 5. Resolve cluster ────────────────────────────────────────────────────
   cluster_idx <- resolve_cols(rlang::enquo(cluster), "cluster", optional = TRUE)
-  cluster_cols <- if (!is.null(cluster_idx)) names(cluster_idx) else NULL
+  cluster_col <- if (!is.null(cluster_idx)) names(cluster_idx) else NULL
 
   # ── 6. Resolve labels ────────────────────────────────────────────────────
   resolve_labels <- function(user_labels, col_names, arg_name) {
@@ -154,10 +153,15 @@ initiate_study <- function(
     confounder_cols,
     "confounder_labels"
   )
-  resolved_cluster_labels <- if (!is.null(cluster_cols)) {
-    resolve_labels(cluster_labels, cluster_cols, "cluster_labels")
+  resolved_cluster_label <- if (!is.null(cluster_col)) {
+    resolve_labels(cluster_label, cluster_col, "cluster_label")
   } else {
     NULL
+  }
+
+  # Check that there is only one cluster variable, if specified
+  if (!is.null(cluster_col) && length(cluster_col) > 1L) {
+    stop("Multiple cluster variables specified. Can only specify one.", call. = FALSE)
   }
 
   # ── 7. Store data by reference ───────────────────────────────────────────
@@ -174,8 +178,8 @@ initiate_study <- function(
       confounder_cols = confounder_cols,
       confounder_labels = resolved_confounder_labels,
 
-      cluster_cols = cluster_cols,
-      cluster_labels = resolved_cluster_labels,
+      cluster_col = cluster_col,
+      cluster_label = resolved_cluster_label,
 
       # Populated by add()
       treatment_meta = NULL,
@@ -185,16 +189,24 @@ initiate_study <- function(
       outcome_labels = NULL,
       adjustment_sets = NULL,
       censoring = NULL,
+      outcome_contrasts = NULL,
 
-      # Enfold sub-tasks — populated by add()
+      # Enfold sub-tasks — populated by add_models()
       treatment_tasks = NULL,
       outcome_tasks = NULL,
       censoring_tasks = NULL,
+      mtp_tasks = NULL,
 
-      # Specs (learners + metalearners) — populated by add()
-      treatment_specs = NULL,
-      outcome_specs = NULL,
-      censoring_specs = NULL,
+      # Intervened datasets — populated by define_interventions()
+      intervened_data = NULL,
+
+      # Fitted results — populated by fit_interventions() / fit_outcomes()
+      clever_covariates = NULL,
+      outcome_predictions = NULL,
+
+      # TMLE results — populated by do_tmle()
+      tmle_results = NULL,
+      tmle_bootstrap = NULL,
 
       # CV folds — populated by add_cv_folds()
       fold_store = NULL,
@@ -202,14 +214,14 @@ initiate_study <- function(
       extra_vars = extra_vars,
       verbose = verbose
     ),
-    class = "nana_task"
+    class = "enact_task"
   )
 }
 
 
 #' @export
-print.nana_task <- function(x, ...) {
-  cat(sprintf("── nana_task %s\n", paste(rep("\u2500", 38), collapse = "")))
+print.enact_task <- function(x, ...) {
+  cat(sprintf("── enact_task %s\n", paste(rep("\u2500", 38), collapse = "")))
   cat(sprintf("  Observations : %d\n\n", x$n_obs))
 
   # Confounders
@@ -272,10 +284,10 @@ print.nana_task <- function(x, ...) {
   # Optional structural variables
   optional_lines <- character(0)
 
-  if (!is.null(x$cluster_cols)) {
+  if (!is.null(x$cluster_col)) {
     optional_lines <- c(
       optional_lines,
-      sprintf("  Cluster      : %d variable(s)", length(x$cluster_cols))
+      sprintf("  Cluster      : %d variable(s)", length(x$cluster_col))
     )
   }
   if (!is.null(x$adjustment_sets)) {
@@ -310,10 +322,11 @@ print.nana_task <- function(x, ...) {
   } else {
     0L
   }
-  if (n_trt + n_out + n_cens > 0L) {
+  n_mtp <- if (!is.null(x$mtp_tasks)) length(x$mtp_tasks) else 0L
+  if (n_trt + n_out + n_cens + n_mtp > 0L) {
     cat(sprintf(
-      "\n  Enfold tasks : %d treatment, %d outcome, %d censoring\n",
-      n_trt, n_out, n_cens
+      "\n  Enfold tasks : %d treatment, %d outcome, %d censoring, %d mtp\n",
+      n_trt, n_out, n_cens, n_mtp
     ))
   }
 

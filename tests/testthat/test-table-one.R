@@ -11,16 +11,13 @@ make_data <- function(n = 100L) {
   )
 }
 
-# ── Minimal enfold learner specs for testing ────────────────────────────────
-lrn <- enfold::lrn_mean("mean")
-mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
   add(task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl)
+    A = treatment(A),
+    Y = outcome(Y)
   )
 }
 
@@ -28,8 +25,8 @@ make_task <- function(d = NULL) {
 # create_table_one()
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("create_table_one rejects non-nana_task", {
-  expect_error(create_table_one("not_a_task"), "nana_task")
+test_that("create_table_one rejects non-enact_task", {
+  expect_error(create_table_one("not_a_task"), "enact_task")
 })
 
 test_that("create_table_one rejects bad use_weights", {

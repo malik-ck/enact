@@ -11,37 +11,41 @@ make_data <- function(n = 100L) {
   )
 }
 
-# ── Minimal enfold learner specs for testing ────────────────────────────────
-lrn <- enfold::lrn_mean("mean")
-mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Auto-detect censoring from NAs
+# NAs require explicit censoring
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("auto-detect creates censoring indicator from outcome NAs", {
+test_that("NAs in outcome without censoring column produce an error", {
   d <- make_data(50L)
   d$Y[c(2, 5, 10)] <- NA
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(
-    task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, label = "Y")
+  expect_error(
+    add(task, A = treatment(A), Y = outcome(Y)),
+    "missing value.*no censoring"
   )
+})
 
-  expect_true("Y" %in% names(task$censoring))
-  expect_length(task$censoring$Y, nrow(d))
-  expect_equal(task$censoring$Y[c(2, 5, 10)], c(0L, 0L, 0L))
-  expect_equal(task$censoring$Y[1], 1L)
+test_that("censoring column must cover all NAs in outcome", {
+  d <- make_data(50L)
+  d$C <- 1L
+  d$C[3] <- 0L
+  d$Y[8] <- NA  # not covered by C
+
+  task <- initiate_study(d, confounders = X1, verbose = FALSE)
+  expect_error(
+    add(task, A = treatment(A), Y = outcome(Y, censoring = C)),
+    "NA in outcome but censoring.*is 1"
+  )
 })
 
 test_that("no censoring created when outcome has no NAs", {
   d <- make_data(50L)
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl)
+    A = treatment(A),
+    Y = outcome(Y)
   )
 
   expect_length(task$censoring, 0L)
@@ -60,8 +64,8 @@ test_that("manual censoring column is picked up by add()", {
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
+    A = treatment(A),
+    Y = outcome(Y, censoring = C, label = "Y")
   )
 
   expect_true("Y" %in% names(task$censoring))
@@ -69,7 +73,7 @@ test_that("manual censoring column is picked up by add()", {
   expect_equal(task$censoring$Y[1], 1L)
 })
 
-test_that("manual censoring suppresses auto-detect (no remaining NAs)", {
+test_that("manual censoring with no NAs in outcome works", {
   d <- make_data(50L)
   d$C <- 1L
   d$C[c(2, 4)] <- 0L
@@ -78,8 +82,8 @@ test_that("manual censoring suppresses auto-detect (no remaining NAs)", {
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
+    A = treatment(A),
+    Y = outcome(Y, censoring = C, label = "Y")
   )
 
   # Censoring should exist (from manual) and be length nrow
@@ -89,21 +93,19 @@ test_that("manual censoring suppresses auto-detect (no remaining NAs)", {
   expect_equal(sum(task$censoring$Y == 0L), 2L)
 })
 
-test_that("auto-detect fills gaps when manual censoring misses NAs", {
+test_that("censoring column covers outcome NAs exactly", {
   d <- make_data(50L)
   d$C <- 1L
-  d$C[3] <- 0L
-  # Also put an NA at row 8 — manual C doesn't cover it
-  d$Y[8] <- NA
+  d$C[c(3, 8)] <- 0L
+  d$Y[8] <- NA  # covered by C
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
+    A = treatment(A),
+    Y = outcome(Y, censoring = C, label = "Y")
   )
 
-  # Both manual (row 3) and auto-detected (row 8) should be censored
   expect_true("Y" %in% names(task$censoring))
   expect_equal(task$censoring$Y[3], 0L)
   expect_equal(task$censoring$Y[8], 0L)
@@ -118,8 +120,8 @@ test_that("manual censoring: non-existent column name errors", {
   expect_error(
     add(
       task,
-      A = treatment(A, learners = lrn, metalearner = mtl),
-      Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = NonExistent)
+      A = treatment(A),
+      Y = outcome(Y, censoring = NonExistent)
     ),
     "Cannot resolve|not found|doesn't exist"
   )
@@ -134,8 +136,8 @@ test_that("manual censoring via column index", {
   # C is column 7 in d (X1, X2, A, Y, Z, cl, C)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = 7, label = "Y")
+    A = treatment(A),
+    Y = outcome(Y, censoring = 7, label = "Y")
   )
 
   expect_true("Y" %in% names(task$censoring))
@@ -151,8 +153,8 @@ test_that("censoring stored as integer vector, not data.frame", {
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C, label = "Y")
+    A = treatment(A),
+    Y = outcome(Y, censoring = C, label = "Y")
   )
 
   expect_true(is.integer(task$censoring$Y))
@@ -168,8 +170,8 @@ test_that("censoring values outside {0, 1} produce an error", {
   expect_error(
     add(
       task,
-      A = treatment(A, learners = lrn, metalearner = mtl),
-      Y = outcome(Y, learners = lrn, metalearner = mtl, censoring = C)
+      A = treatment(A),
+      Y = outcome(Y, censoring = C)
     ),
     "must be 0 or 1"
   )
@@ -177,13 +179,14 @@ test_that("censoring values outside {0, 1} produce an error", {
 
 test_that("print shows censored count", {
   d <- make_data(50L)
-  d$Y[c(1, 2)] <- NA
+  d$C <- 1L
+  d$C[c(1, 2)] <- 0L
 
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- add(
     task,
-    A = treatment(A, learners = lrn, metalearner = mtl),
-    Y = outcome(Y, learners = lrn, metalearner = mtl)
+    A = treatment(A),
+    Y = outcome(Y, censoring = C)
   )
   expect_output(print(task), "censored")
 })

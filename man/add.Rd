@@ -7,7 +7,7 @@
 add(task, ...)
 }
 \arguments{
-\item{task}{A study task object (e.g. \code{nana_task}).}
+\item{task}{A study task object (e.g. \code{enact_task}).}
 
 \item{\dots}{Named objects to add.  Each argument name becomes the
 treatment or outcome name in the task.}
@@ -17,6 +17,6 @@ The modified task.
 }
 \description{
 Generic function for attaching treatments, outcomes, and censoring learners
-to a \code{nana_task}.  Methods dispatch on the class of the objects passed
+to a \code{enact_task}.  Methods dispatch on the class of the objects passed
 in \code{...}.
 }

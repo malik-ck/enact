@@ -7,9 +7,9 @@
 outcome_folds(cv, task, outcome_name)
 }
 \arguments{
-\item{cv}{A \code{enfold_cv} object.}
+\item{cv}{A \code{enfold_cv} object.R}
 
-\item{task}{A \code{nana_task} with censoring indicators populated.}
+\item{task}{A \code{enact_task} with censoring indicators populated.}
 
 \item{outcome_name}{Character. Name of the outcome in \code{task$outcomes}.}
 }

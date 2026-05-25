@@ -7,7 +7,7 @@
 validate_intervention(task, intervention_name)
 }
 \arguments{
-\item{task}{A \code{nana_task} object.}
+\item{task}{A \code{enact_task} object.}
 
 \item{intervention_name}{Character. Name of the intervention to validate.}
 }

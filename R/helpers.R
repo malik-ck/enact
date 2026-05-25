@@ -1,14 +1,4 @@
 
-# Check newest version
-#' @export
-last_update <- function() {
-  message("Last push: ",
-          system(
-            "git log -1 --format=%cd",
-            intern = TRUE
-          ))
-}
-
 # Draw from a uniform dirichlet distribution
 r_unif_dirichlet <- function(n, k) {
 

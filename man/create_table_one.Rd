@@ -16,7 +16,7 @@ create_table_one(
 )
 }
 \arguments{
-\item{task}{A \code{nana_task} object.}
+\item{task}{A \code{enact_task} object.}
 
 \item{vars}{<\code{\link[tidyselect:language]{tidyselect}}> Optional subset of
 confounder columns to include. If \code{NULL} (default), all confounders

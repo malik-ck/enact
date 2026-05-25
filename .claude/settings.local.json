@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Rscript -e \"devtools::test\\(\\)\")"
+      "Bash(Rscript -e \"devtools::test\\(\\)\")",
+      "Bash(Rscript -e \"devtools::document\\(\\)\")",
+      "Bash(powershell *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\R\\\\R-4.5.0\\\\bin\\\\Rscript.exe\" -e \"devtools::document\\(\\)\" 2>&1)"
     ]
   }
 }

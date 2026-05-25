@@ -4,36 +4,19 @@
 \alias{intervention}
 \title{Create a causal intervention object}
 \usage{
-intervention(
-  intervene,
-  mtp = FALSE,
-  stochastic = FALSE,
-  n_draws = 100L,
-  label = NULL
-)
+intervention(intervene, mtp = FALSE, label = NULL)
 }
 \arguments{
 \item{intervene}{A function with signature \code{function(a, l)} where
-\code{a} is a numeric vector of observed treatment values and \code{l} is
+\code{a} is a numeric data frame or matrix of observed treatment values and \code{l} is
 a data frame or matrix of covariates (one row per observation). Must
 return a numeric vector of length \code{length(a)} representing the
-intervened treatment values. For stochastic interventions, the function
-should return a single draw per observation; multiple draws for variance
-reduction are handled internally via \code{n_draws}.}
+intervened treatment values.}
 
 \item{mtp}{Logical. If \code{TRUE}, the density ratio is estimated via the
 2n augmented dataset classification approach, which is required when the
 intervention depends on the natural value of treatment. If \code{FALSE},
 the density ratio is computed directly from the propensity score model.}
-
-\item{stochastic}{Logical. If \code{TRUE}, the plug-in step averages
-\code{n_draws} random draws from the intervention distribution per
-observation for Monte Carlo variance reduction. Requires \code{intervene}
-to be a random function.}
-
-\item{n_draws}{Positive integer. Number of Monte Carlo draws per observation
-used in the plug-in step when \code{stochastic = TRUE}. Ignored when
-\code{stochastic = FALSE}. Defaults to 100L.}
 
 \item{label}{Character string.  Display label and identifier used by
 \code{\link{define_interventions}}.  Required.}

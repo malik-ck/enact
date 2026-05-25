@@ -1,6 +1,6 @@
 #' Create a Table 1 summary of baseline characteristics
 #'
-#' @param task A \code{nana_task} object.
+#' @param task A \code{enact_task} object.
 #' @param vars <[`tidyselect`][tidyselect::language]> Optional subset of
 #'   confounder columns to include. If \code{NULL} (default), all confounders
 #'   are included.
@@ -35,8 +35,8 @@ create_table_one <- function(task,
                              max_strata           = 10L,
                              ...) {
 
-  if (!inherits(task, "nana_task"))
-    stop("`task` must be a nana_task object.")
+  if (!inherits(task, "enact_task"))
+    stop("`task` must be a enact_task object.")
   if (!requireNamespace("gtsummary", quietly = TRUE))
     stop("Package 'gtsummary' is required. Install with install.packages('gtsummary').")
   if (!is.logical(use_weights) || length(use_weights) != 1L)

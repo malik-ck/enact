@@ -9,7 +9,7 @@ initiate_study(
   confounders,
   cluster = NULL,
   confounder_labels = NULL,
-  cluster_labels = NULL,
+  cluster_label = NULL,
   extra_vars = NULL,
   verbose = TRUE
 )
@@ -23,13 +23,12 @@ set.  Also accepts a character vector of column names or an integer index
 vector.  Stored as column name references (no data extraction).}
 
 \item{cluster}{<\code{\link[tidyselect:language]{tidyselect}}> Optional cluster
-variable(s).  Also accepts a character vector of column names orn integer
-index vector.}
+variable. Also accepts a character value or an integer index.}
 
 \item{confounder_labels}{Optional character vector of display labels for
 confounder columns.  Named: matched by column name.  Unnamed: positional.}
 
-\item{cluster_labels}{Optional character vector of display labels for
+\item{cluster_label}{Optional character vector of display labels for
 cluster columns.  Named or unnamed (positional).}
 
 \item{extra_vars}{Optional named list of arbitrary objects to be carried in
@@ -40,10 +39,10 @@ offset vectors, external data).}
 informational messages.}
 }
 \value{
-An S3 object of class \code{nana_task}.
+An S3 object of class \code{enact_task}.
 }
 \description{
-Creates the base \code{nana_task} scaffold that holds study data, confounders,
+Creates the base \code{enact_task} scaffold that holds study data, confounders,
 and optionally cluster variables.  Treatments and outcomes are added later via
 \code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
 constructors.

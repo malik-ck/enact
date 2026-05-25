@@ -7,7 +7,7 @@
 intervene(study, intervention_name)
 }
 \arguments{
-\item{study}{A study, which is a \code{list} of class \code{nana_task}.}
+\item{study}{A study, which is a \code{list} of class \code{enact_task}.}
 
 \item{intervention_name}{Name of the intervention to apply to the study.}
 }

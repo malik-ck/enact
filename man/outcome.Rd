@@ -6,10 +6,9 @@
 \usage{
 outcome(
   which,
-  learners,
-  metalearner,
   censoring = NULL,
   label = NULL,
+  contrasts = list(ate()),
   adjustment_set = NULL
 )
 }
@@ -18,22 +17,21 @@ outcome(
 study data.  Also accepts a character vector of column names or an integer
 index vector.}
 
-\item{learners}{A list of \code{enfold_learner} objects (e.g.
-\code{lrn_glm()}), or a single learner.  Used to build the SuperLearner
-ensemble for the outcome regression model.  Required.}
-
-\item{metalearner}{An \code{enfold_learner} created by a metalearner
-constructor (e.g. \code{mtl_superlearner()}).  Determines how base
-learner predictions are combined.  Required.}
-
-\item{censoring}{<\code{\link[tidyselect:language]{tidyselect}}> Optional censoring
-indicator column in the study data.  Values should be \code{0} (censored)
+\item{censoring}{<\code{\link[tidyselect:language]{tidyselect}}> Censoring indicator
+column in the study data.  Values should be \code{0} (censored)
 or \code{1} (observed).  Also accepts a character column name or integer
 column index (must resolve to a single column).
-When \code{NULL} (default), censoring is auto-detected from \code{NA}
-values in the outcome.}
+Required when the outcome contains \code{NA} values.  The censoring
+indicator must be \code{0} wherever the outcome is \code{NA}.
+When \code{NULL} and the outcome has no \code{NA}s, no censoring
+is recorded.}
 
 \item{label}{Optional character string.  Display label for this outcome.}
+
+\item{contrasts}{List of contrast functions to apply to this outcome.
+Each function should take two arguments: \code{reference} and \code{treatment}.
+\code{\link{ate}}, \code{\link{log_relative_ate}}, and \code{\link{log_odds_ratio}}
+are provided as standard contrasts for interventions. Default is the average treatment effect.}
 
 \item{adjustment_set}{Character vector of confounder column names or integer
 indices into the confounder block.  \code{NULL} (default) inherits the full
@@ -45,5 +43,6 @@ An S3 object of class \code{enact_outcome}.
 \description{
 Constructs an \code{enact_outcome} object that describes a single study
 outcome.  Selections are captured unevaluated (via tidyselect / quosure
-semantics) and resolved later by \code{\link{add}}.
+semantics) and resolved later by \code{\link{add}}.  Nuisance models are
+specified separately via \code{\link{add_models}}.
 }

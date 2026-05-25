@@ -4,20 +4,12 @@
 \alias{treatment}
 \title{Define a treatment variable}
 \usage{
-treatment(which, learners, metalearner, label = NULL)
+treatment(which, label = NULL)
 }
 \arguments{
 \item{which}{<\code{\link[tidyselect:language]{tidyselect}}> Treatment column(s) in
 the study data.  Also accepts a character vector of column names or an
 integer index vector.}
-
-\item{learners}{A list of \code{enfold_learner} objects (e.g.
-\code{lrn_glm()}), or a single learner.  Used to build the SuperLearner
-ensemble for the treatment mechanism model.}
-
-\item{metalearner}{An \code{enfold_learner} created by a metalearner
-constructor (e.g. \code{mtl_superlearner()}).  Determines how base
-learner predictions are combined.}
 
 \item{label}{Optional character string.  Display label for this treatment.}
 }
@@ -27,5 +19,6 @@ An S3 object of class \code{enact_treatment}.
 \description{
 Constructs an \code{enact_treatment} object that describes a single
 treatment.  The column selection is captured unevaluated (via tidyselect /
-quosure semantics) and resolved later by \code{\link{add}}.
+quosure semantics) and resolved later by \code{\link{add}}.  Nuisance
+models are specified separately via \code{\link{add_models}}.
 }
