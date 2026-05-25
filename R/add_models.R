@@ -98,15 +98,15 @@ mtp <- function(learners, metalearners = NULL) {
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# add() — S3 generic + enact_task method
+# add_models() — S3 generic + enact_task method
 # ══════════════════════════════════════════════════════════════════════════════
 
 #' Add nuisance models to a study task
 #'
 #' Specifies the learners and metalearners for treatment mechanisms, outcome
 #' regressions, censoring mechanisms, and/or MTP density ratio models.  Must be
-#' called after \code{\link{add}} and \code{\link{add_cv_folds}}.  Can only be
-#' called once per task.
+#' called after \code{\link{add_treatment}} / \code{\link{add_outcome}} and
+#' \code{\link{add_cv_folds}}.  Can only be called once per task.
 #'
 #' @param task A \code{enact_task} object.
 #' @param \dots Selector objects created by \code{\link{treatments}},
@@ -155,7 +155,7 @@ add_models.enact_task <- function(task, ...) {
 
   # ── Validate task state ───────────────────────────────────────────────────
   if (is.null(task$treatment_meta) && is.null(task$outcomes)) {
-    stop("No treatments or outcomes found. Call add() before add_models().", call. = FALSE)
+    stop("No treatments or outcomes found. Call add_treatment() / add_outcome() before add_models().", call. = FALSE)
   }
 
   if (!is.null(task$treatment_tasks) || !is.null(task$outcome_tasks) ||
@@ -241,7 +241,7 @@ add_models.enact_task <- function(task, ...) {
 process_treatments_selector <- function(task, sel, data, is_df,
                                         build_enfold_task) {
   if (is.null(task$treatment_meta)) {
-    stop("No treatments found in task. Call add() with treatment() first.", call. = FALSE)
+    stop("No treatments found in task. Call add_treatment() first.", call. = FALSE)
   }
 
   all_trt_names <- names(task$treatment_meta)
@@ -272,7 +272,7 @@ process_treatments_selector <- function(task, sel, data, is_df,
 process_outcomes_selector <- function(task, sel, data, is_df,
                                       build_enfold_task) {
   if (is.null(task$outcomes)) {
-    stop("No outcomes found in task. Call add() with outcome() first.", call. = FALSE)
+    stop("No outcomes found in task. Call add_outcome() first.", call. = FALSE)
   }
 
   all_out_names <- names(task$outcomes)

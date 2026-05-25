@@ -8,13 +8,20 @@ License: MIT + file LICENSE
 Depends: R (>= 4.1.0)
 Imports:
     enfold,
+    knitr,
     rlang,
+    rmarkdown,
     stats,
     tidyselect
 Suggests:
     cobalt,
+    flextable,
     ggplot2,
-    testthat (>= 3.0.0)
+    gtsummary,
+    kableExtra,
+    rticles,
+    testthat (>= 3.0.0),
+    zip
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

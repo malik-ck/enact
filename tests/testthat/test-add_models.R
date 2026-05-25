@@ -16,13 +16,14 @@ mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add(task, A = treatment(A), Y = outcome(Y))
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
 }
 
 make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   task <- make_task(d)
-  add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv, verbose = FALSE)
+  add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv)
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -81,11 +82,11 @@ test_that("add_models() rejects non-selector objects", {
   expect_error(add_models(task, "not_a_selector"), "not a valid selector")
 })
 
-test_that("add_models() rejects calls before add()", {
+test_that("add_models() rejects calls before add_treatment()/add_outcome()", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
-  expect_error(add_models(task, treatments(learners = lrn)), "Call add\\(\\)")
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
+  expect_error(add_models(task, treatments(learners = lrn)), "add_treatment")
 })
 
 test_that("add_models() rejects calls without CV folds", {
@@ -95,7 +96,7 @@ test_that("add_models() rejects calls without CV folds", {
 
 test_that("add_models() rejects multiple learners without outer CV", {
   task <- make_task()
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = NULL, verbose = FALSE)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = NULL)
   expect_error(
     add_models(task, treatments(learners = list(lrn, lrn), metalearners = mtp)),
     "outer CV"
@@ -134,8 +135,11 @@ test_that("add_models() with named treatments() targets specific treatment", {
   d <- make_data()
   d$A2 <- rbinom(nrow(d), 1L, 0.5)
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), A2 = treatment(A2), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- task |>
+    add_treatment("A", A) |>
+    add_treatment("A2", A2) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, treatments("A", learners = lrn))
 
   expect_true("A" %in% names(task$treatment_tasks))
@@ -164,8 +168,11 @@ test_that("add_models() with outcomes() creates outcome tasks and specs", {
 test_that("add_models() with named outcomes() targets specific outcome", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y), Z = outcome(Z))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- task |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y) |>
+    add_outcome("Z", Z)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, outcomes("Y", learners = lrn))
 
   expect_true("Y" %in% names(task$outcome_tasks))
@@ -181,8 +188,10 @@ test_that("add_models() with censoring() creates tasks for censored outcomes", {
   d$C <- 1L
   d$C[c(2, 5)] <- 0L
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y, censoring = C))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- task |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y, censoring = C)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, censoring(learners = lrn))
 
   expect_true("Y" %in% names(task$censoring_tasks))
@@ -252,8 +261,9 @@ test_that("add_models() with multiple selectors in one call", {
 test_that("full pipeline: initiate -> add -> folds -> interventions -> add_models", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add(A = treatment(A), Y = outcome(Y, censoring = NULL)) |>
-    add_cv_folds(inner_cv = 2L, outer_cv = 2L, verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y, censoring = NULL) |>
+    add_cv_folds(inner_cv = 2L, outer_cv = 2L) |>
     define_interventions(static_intervention(1, label = "static"))
 
   task <- add_models(task, treatments(learners = lrn), outcomes(learners = lrn))

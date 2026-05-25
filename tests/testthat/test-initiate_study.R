@@ -24,7 +24,7 @@ test_that("initiate_study returns a enact_task with correct structure", {
   expect_true(is.environment(task$data_env))
   expect_identical(task$data_env$data, d)
   expect_equal(task$confounder_cols, c("X1", "X2"))
-  expect_true(is.null(task$cluster_cols))
+  expect_true(is.null(task$cluster_col))
   expect_true(is.null(task$outcomes))
   expect_true(is.null(task$treatment_meta))
 })
@@ -43,7 +43,7 @@ test_that("initiate_study accepts cluster", {
   task <- initiate_study(d, confounders = c("X1", "X2"),
                          cluster = cl, verbose = FALSE)
 
-  expect_equal(task$cluster_cols, "cl")
+  expect_equal(task$cluster_col, "cl")
 })
 
 test_that("initiate_study stores confounder labels", {
@@ -80,50 +80,13 @@ test_that("data_env is locked — no modification after creation", {
 })
 
 # ══════════════════════════════════════════════════════════════════════════════
-# treatment() constructor
+# add_treatment()
 # ══════════════════════════════════════════════════════════════════════════════
 
-test_that("treatment() creates enact_treatment object", {
-  trt <- treatment(A, label = "Treatment A")
-  expect_s3_class(trt, "enact_treatment")
-  expect_equal(trt$label, "Treatment A")
-  expect_true(rlang::quo_is_call(trt$which) || rlang::quo_is_symbol(trt$which))
-})
-
-test_that("treatment() rejects non-string label", {
-  expect_error(treatment(A, label = 42), "character string")
-  expect_error(treatment(A, label = c("a", "b")), "character string")
-})
-
-# ══════════════════════════════════════════════════════════════════════════════
-# outcome() constructor
-# ══════════════════════════════════════════════════════════════════════════════
-
-test_that("outcome() creates enact_outcome object", {
-  oc <- outcome(Y, label = "Outcome Y", adjustment_set = c("X1"))
-  expect_s3_class(oc, "enact_outcome")
-  expect_equal(oc$label, "Outcome Y")
-  expect_equal(oc$adjustment_set, "X1")
-  expect_true(rlang::quo_is_null(oc$censoring))
-})
-
-test_that("outcome() captures censoring quosure", {
-  oc <- outcome(Y, censoring = C, label = "Y with censoring")
-  expect_false(rlang::quo_is_null(oc$censoring))
-})
-
-test_that("outcome() rejects non-string label", {
-  expect_error(outcome(Y, label = 99), "character string")
-})
-
-# ══════════════════════════════════════════════════════════════════════════════
-# add()
-# ══════════════════════════════════════════════════════════════════════════════
-
-test_that("add() attaches treatment to task", {
+test_that("add_treatment() attaches treatment to task", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A, label = "Arm A"))
+  task <- add_treatment(task, "A", A, label = "Arm A")
 
   expect_true(!is.null(task$treatment_meta))
   expect_true("A" %in% names(task$treatment_meta))
@@ -131,86 +94,94 @@ test_that("add() attaches treatment to task", {
   expect_equal(task$treatment_labels[["A"]], "Arm A")
 })
 
-test_that("add() attaches outcome to task", {
+test_that("add_treatment() rejects non-string label", {
+  d <- make_data()
+  task <- initiate_study(d, confounders = X1, verbose = FALSE)
+  expect_error(add_treatment(task, "A", A, label = 42), "character string")
+  expect_error(add_treatment(task, "A", A, label = c("a", "b")), "character string")
+})
+
+test_that("add_treatment() rejects bad name argument", {
+  d <- make_data()
+  task <- initiate_study(d, confounders = X1, verbose = FALSE)
+  expect_error(add_treatment(task, "", A), "non-empty character string")
+  expect_error(add_treatment(task, c("A", "B"), A), "non-empty character string")
+})
+
+test_that("add_treatment() errors on duplicate name", {
+  d <- make_data()
+  task <- initiate_study(d, confounders = X1, verbose = FALSE)
+  task <- add_treatment(task, "A", A)
+  expect_error(add_treatment(task, "A", A), "already exists")
+})
+
+# ══════════════════════════════════════════════════════════════════════════════
+# add_outcome()
+# ══════════════════════════════════════════════════════════════════════════════
+
+test_that("add_outcome() attaches outcome to task", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task,
-    A = treatment(A),
-    Y = outcome(Y, label = "My Y")
-  )
+  task <- task |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y, label = "My Y")
 
   expect_true("Y" %in% names(task$outcomes))
   expect_true("Y" %in% names(task$outcome_labels))
   expect_equal(task$outcome_labels[["Y"]], "My Y")
 })
 
-test_that("add() with adjustment_set", {
+test_that("add_outcome() with adjustment_set", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, Y = outcome(Y, adjustment_set = "X1"))
+  task <- add_outcome(task, "Y", Y, adjustment_set = "X1")
 
   expect_equal(task$adjustment_sets[["Y"]], 1L)
 })
 
-test_that("add() NULL adjustment_set inherits all confounders", {
+test_that("add_outcome() NULL adjustment_set inherits all confounders", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, Y = outcome(Y))
+  task <- add_outcome(task, "Y", Y)
 
   expect_true(is.null(task$adjustment_sets[["Y"]]))
 })
 
-test_that("add() errors on unnamed arguments", {
+test_that("add_outcome() rejects non-string label", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  expect_error(add(task, treatment(A)), "must be named")
+  expect_error(add_outcome(task, "Y", Y, label = 99), "character string")
 })
 
-test_that("add() errors on duplicate treatment names", {
+test_that("add_outcome() errors on duplicate outcome name", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(task, A = treatment(A))
-  expect_error(add(task, A = treatment(A)), "already exist")
+  task <- add_outcome(task, "Y", Y)
+  expect_error(add_outcome(task, "Y", Y), "already exists")
 })
 
-test_that("add() errors on duplicate outcome names", {
+test_that("add_outcome() errors on treatment-outcome column overlap", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(task, Y = outcome(Y))
-  expect_error(add(task, Y = outcome(Y)), "already exist")
+  task <- add_treatment(task, "A", A)
+  expect_error(add_outcome(task, "Y", A), "also appear in treatment")
 })
 
-test_that("add() errors on non-treatment/outcome objects", {
+test_that("incremental: treatment first, outcome later", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  expect_error(add(task, A = "not_a_constructor"), "not treatment")
-})
+  task <- add_treatment(task, "A", A)
+  task <- add_outcome(task, "Y", Y)
 
-test_that("add() errors on treatment-outcome column overlap", {
-  d <- make_data()
-  task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(task, A = treatment(A))
-  expect_error(add(task, Y = outcome(A)), "also appear in treatment")
-})
-
-test_that("add() with both treatment and outcome in one call", {
-  d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(
-    task,
-    A = treatment(A, label = "Arm"),
-    Y = outcome(Y, label = "Response")
-  )
   expect_true("A" %in% names(task$treatment_meta))
   expect_true("Y" %in% names(task$outcomes))
 })
 
-test_that("add() incremental: treatment first, outcomes later", {
+test_that("piped: treatment and outcome together", {
   d <- make_data()
-  task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  task <- add(task, A = treatment(A))
-  task <- add(task, Y = outcome(Y))
-
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A, label = "Arm") |>
+    add_outcome("Y", Y, label = "Response")
   expect_true("A" %in% names(task$treatment_meta))
   expect_true("Y" %in% names(task$outcomes))
 })
@@ -221,11 +192,9 @@ test_that("add() incremental: treatment first, outcomes later", {
 
 test_that("print.enact_task works without error", {
   d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task,
-    A = treatment(A),
-    Y = outcome(Y)
-  )
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
   expect_output(print(task), "enact_task")
   expect_output(print(task), "Confounders")
   expect_output(print(task), "Treatment")

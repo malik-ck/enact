@@ -15,13 +15,14 @@ mtl <- enfold::mtl_selector("sel")
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add(task, A = treatment(A), Y = outcome(Y))
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
 }
 
 make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   task <- make_task(d)
-  add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv, verbose = FALSE)
+  add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv)
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -254,9 +255,10 @@ test_that("2N density ratio recovers analytic ratio for continuous shift MTP", {
 
   true_r <- dnorm(A, mu_w + delta, 1) / dnorm(A, mu_w, 1)
 
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     mtp_intervention(function(a, l) {
@@ -300,13 +302,11 @@ test_that("full pipeline: two outcomes, censoring, adjustment sets", {
   d$Y1[d$C == 0L] <- NA
   d$Y2 <- rnorm(n) + 0.5 * d$A
 
-  task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE)
-  task <- add(task,
-    A  = treatment(A),
-    Y1 = outcome(Y1, censoring = C, adjustment_set = c("X1", "X2")),
-    Y2 = outcome(Y2)
-  )
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y1", Y1, censoring = C, adjustment_set = c("X1", "X2")) |>
+    add_outcome("Y2", Y2)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),

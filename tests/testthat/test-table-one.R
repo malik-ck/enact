@@ -14,11 +14,9 @@ make_data <- function(n = 100L) {
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add(task,
-    A = treatment(A),
-    Y = outcome(Y)
-  )
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
 }
 
 # ══════════════════════════════════════════════════════════════════════════════

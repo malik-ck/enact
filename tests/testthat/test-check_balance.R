@@ -17,9 +17,10 @@ mtl <- enfold::mtl_selector("sel")
 
 make_ready_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -45,9 +46,10 @@ test_that("check_balance() rejects non-task", {
 
 test_that("check_balance() rejects task without clever covariates", {
   d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "treat"))
   task <- add_models(task, treatments(learners = lrn, metalearners = mtl))
   # fit_interventions NOT called
@@ -114,8 +116,10 @@ test_that("confounder labels are used instead of raw names", {
     confounder_labels = c(X1 = "Confounder A", X2 = "Confounder B"),
     verbose = FALSE
   )
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- task |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -176,13 +180,11 @@ test_that("check_balance() handles multiple outcomes with censoring", {
   d$Y1[d$C == 0L] <- NA
   d$Y2 <- rnorm(n) + 0.5 * d$A
 
-  task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE)
-  task <- add(task,
-    A  = treatment(A),
-    Y1 = outcome(Y1, censoring = C, adjustment_set = c("X1", "X2")),
-    Y2 = outcome(Y2)
-  )
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y1", Y1, censoring = C, adjustment_set = c("X1", "X2")) |>
+    add_outcome("Y2", Y2)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -216,9 +218,10 @@ test_that("check_balance() handles multiple outcomes with censoring", {
 
 test_that("check_balance() works with MTP interventions", {
   d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),

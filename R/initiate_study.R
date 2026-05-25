@@ -2,8 +2,7 @@
 #'
 #' Creates the base \code{enact_task} scaffold that holds study data, confounders,
 #' and optionally cluster variables.  Treatments and outcomes are added later via
-#' \code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
-#' constructors.
+#' \code{\link{add_treatment}} and \code{\link{add_outcome}}.
 #'
 #' @param data A \code{data.frame} or \code{matrix} containing all study
 #'   variables.  Stored by reference in a locked environment (no copy).
@@ -181,7 +180,7 @@ initiate_study <- function(
       cluster_col = cluster_col,
       cluster_label = resolved_cluster_label,
 
-      # Populated by add()
+      # Populated by add_treatment() / add_outcome()
       treatment_meta = NULL,
       treatment_labels = NULL,
 
@@ -230,7 +229,7 @@ print.enact_task <- function(x, ...) {
   # Treatments
   cat("  Treatments\n")
   if (is.null(x$treatment_meta)) {
-    cat("    \u00b7 (none \u2014 use add())\n")
+    cat("    \u00b7 (none \u2014 use add_treatment())\n")
   } else {
     type_tag <- function(type) {
       switch(type, binary = "[binary]", numerical = "[numerical]", sprintf("[%s]", type))
@@ -261,7 +260,7 @@ print.enact_task <- function(x, ...) {
   # Outcomes
   cat("  Outcomes\n")
   if (is.null(x$outcomes)) {
-    cat("    \u00b7 (none \u2014 use add())\n")
+    cat("    \u00b7 (none \u2014 use add_outcome())\n")
   } else {
     for (nm in names(x$outcomes)) {
       y <- x$outcomes[[nm]]

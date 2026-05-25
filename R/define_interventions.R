@@ -141,7 +141,7 @@ intervene.enact_task <- function(study, intervention_name) {
   # Check that treatment variables exist on the task
   if (is.null(study$treatment_meta)) {
     stop(
-      "No treatment variables found in task. Use add() with treatment() before define_interventions().",
+      "No treatment variables found in task. Use add_treatment() before define_interventions().",
       call. = FALSE
     )
   }

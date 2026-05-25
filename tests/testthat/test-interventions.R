@@ -14,11 +14,9 @@ make_data <- function(n = 100L) {
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add(task,
-    A = treatment(A),
-    Y = outcome(Y)
-  )
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -126,8 +124,8 @@ test_that("define_interventions() errors on non-intervention objects", {
 test_that("define_interventions() errors on no treatment", {
   d <- make_data()
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
-  # No add() => no treatment_meta
-  task <- add(task, Y = outcome(Y))
+  # No add_treatment() => no treatment_meta
+  task <- add_outcome(task, "Y", Y)
   expect_error(
     define_interventions(task, intervention_arm("A", label = "Arm")),
     "No treatment variables"

@@ -15,13 +15,14 @@ mtl <- enfold::mtl_selector("sel")
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  add(task, A = treatment(A), Y = outcome(Y))
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
 }
 
 make_fitted_task <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   task <- make_task(d)
-  task <- add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv, verbose = FALSE)
+  task <- add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -217,7 +218,7 @@ test_that("summarize_fwb() handles multiple contrasts", {
 
 test_that("do_tmle() rejects task without clever covariates", {
   task <- make_task()
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "iv"))
   task <- add_models(task, outcomes(learners = lrn_glm, metalearners = mtl))
   task <- fit_outcomes(task)
@@ -227,7 +228,7 @@ test_that("do_tmle() rejects task without clever covariates", {
 
 test_that("do_tmle() rejects task without outcome predictions", {
   task <- make_task()
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "iv"))
   task <- add_models(task, treatments(learners = lrn_glm, metalearners = mtl), outcomes(learners = lrn_glm, metalearners = mtl))
   task <- fit_interventions(task)
@@ -281,9 +282,11 @@ test_that("do_tmle() with all_outcomes() targets all outcomes", {
     A = rbinom(n, 1L, 0.5),
     Y1 = rnorm(n), Y2 = rnorm(n)
   )
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y1 = outcome(Y1), Y2 = outcome(Y2))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y1", Y1) |>
+    add_outcome("Y2", Y2)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -383,9 +386,10 @@ test_that("do_tmle() works with cluster variable", {
     Y = rnorm(n),
     cl = sample(letters[1:4], n, replace = TRUE)
   )
-  task <- initiate_study(d, confounders = c(X1, X2), cluster = cl, verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), cluster = cl, verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),
@@ -417,9 +421,10 @@ test_that("do_tmle() works with binomial outcome", {
     A = rbinom(n, 1L, 0.5),
     Y = rbinom(n, 1L, 0.4)
   )
-  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
-  task <- add(task, A = treatment(A), Y = outcome(Y))
-  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L, verbose = FALSE)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment("A", A) |>
+    add_outcome("Y", Y)
+  task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
     static_intervention(1, label = "treat"),

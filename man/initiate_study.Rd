@@ -44,6 +44,5 @@ An S3 object of class \code{enact_task}.
 \description{
 Creates the base \code{enact_task} scaffold that holds study data, confounders,
 and optionally cluster variables.  Treatments and outcomes are added later via
-\code{\link{add}} with \code{\link{treatment}} and \code{\link{outcome}}
-constructors.
+\code{\link{add_treatment}} and \code{\link{add_outcome}}.
 }
