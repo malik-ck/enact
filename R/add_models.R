@@ -5,24 +5,27 @@
 #' Specify treatment nuisance models
 #'
 #' Selector for \code{\link{add_models}}.  Targets treatment mechanism models.
-#' When called without \code{...}, targets all treatments.  Optionally accepts
-#' treatment names to target specific treatments.
 #'
-#' @param \dots Optional treatment names (character strings or unquoted via
-#'   tidyselect).  When empty, targets all treatments.
+#' @param which Treatment identifiers to target.  Either \code{NULL} (the
+#'   default, targets all treatments), a character vector of treatment names,
+#'   or a tidyselect expression such as \code{starts_with("A")} that is
+#'   evaluated against the treatment names at \code{\link{add_models}} time.
 #' @param learners A single \code{enfold_learner} (or pipeline/grid/list), or a
 #'   list of such objects.  Required.
-#' @param metalearners A single \code{enfold_learner} created by a metalearner
+#' @param metalearner A single \code{enfold_learner} created by a metalearner
 #'   constructor (e.g. \code{mtl_superlearner()}).  Required when
 #'   \code{learners} is a list with multiple elements.
 #'
 #' @return An object of class \code{enact_selector_treatments}.
 #' @export
-treatments <- function(..., learners, metalearners = NULL) {
-  nms <- names_from_dots(...)
-  validate_learners(learners, metalearners, "treatments")
+treatments <- function(which = NULL, learners, metalearner = NULL) {
+  validate_learners(learners, metalearner, "treatments")
   structure(
-    list(names = nms, learners = learners, metalearners = metalearners),
+    list(
+      which_quo = rlang::enquo(which),
+      learners = learners,
+      metalearner = metalearner
+    ),
     class = "enact_selector_treatments"
   )
 }
@@ -30,24 +33,27 @@ treatments <- function(..., learners, metalearners = NULL) {
 #' Specify outcome nuisance models
 #'
 #' Selector for \code{\link{add_models}}.  Targets outcome regression models.
-#' When called without \code{...}, targets all outcomes.  Optionally accepts
-#' outcome names to target specific outcomes.
 #'
-#' @param \dots Optional outcome names (character strings or unquoted via
-#'   tidyselect).  When empty, targets all outcomes.
+#' @param which Outcome identifiers to target.  Either \code{NULL} (the
+#'   default, targets all outcomes), a character vector of outcome labels,
+#'   or a tidyselect expression such as \code{starts_with("Y")} that is
+#'   evaluated against the outcome labels at \code{\link{add_models}} time.
 #' @param learners A single \code{enfold_learner} (or pipeline/grid/list), or a
 #'   list of such objects.  Required.
-#' @param metalearners A single \code{enfold_learner} created by a metalearner
+#' @param metalearner A single \code{enfold_learner} created by a metalearner
 #'   constructor (e.g. \code{mtl_superlearner()}).  Required when
 #'   \code{learners} is a list with multiple elements.
 #'
 #' @return An object of class \code{enact_selector_outcomes}.
 #' @export
-outcomes <- function(..., learners, metalearners = NULL) {
-  nms <- names_from_dots(...)
-  validate_learners(learners, metalearners, "outcomes")
+outcomes <- function(which = NULL, learners, metalearner = NULL) {
+  validate_learners(learners, metalearner, "outcomes")
   structure(
-    list(names = nms, learners = learners, metalearners = metalearners),
+    list(
+      which_quo = rlang::enquo(which),
+      learners = learners,
+      metalearner = metalearner
+    ),
     class = "enact_selector_outcomes"
   )
 }
@@ -60,16 +66,16 @@ outcomes <- function(..., learners, metalearners = NULL) {
 #'
 #' @param learners A single \code{enfold_learner} (or pipeline/grid/list), or a
 #'   list of such objects.  Required.
-#' @param metalearners A single \code{enfold_learner} created by a metalearner
+#' @param metalearner A single \code{enfold_learner} created by a metalearner
 #'   constructor (e.g. \code{mtl_superlearner()}).  Required when
 #'   \code{learners} is a list with multiple elements.
 #'
 #' @return An object of class \code{enact_selector_censoring}.
 #' @export
-censoring <- function(learners, metalearners = NULL) {
-  validate_learners(learners, metalearners, "censoring")
+censoring <- function(learners, metalearner = NULL) {
+  validate_learners(learners, metalearner, "censoring")
   structure(
-    list(learners = learners, metalearners = metalearners),
+    list(learners = learners, metalearner = metalearner),
     class = "enact_selector_censoring"
   )
 }
@@ -77,21 +83,20 @@ censoring <- function(learners, metalearners = NULL) {
 #' Specify MTP density ratio models
 #'
 #' Selector for \code{\link{add_models}}.  Targets the 2N density ratio
-#' classifier for Modified Treatment Policies.  Replaces both treatment
-#' mechanism and censoring mechanism models for MTP estimation.
+#' classifier for Modified Treatment Policies.
 #'
 #' @param learners A single \code{enfold_learner} (or pipeline/grid/list), or a
 #'   list of such objects.  Required.
-#' @param metalearners A single \code{enfold_learner} created by a metalearner
+#' @param metalearner A single \code{enfold_learner} created by a metalearner
 #'   constructor (e.g. \code{mtl_superlearner()}).  Required when
 #'   \code{learners} is a list with multiple elements.
 #'
 #' @return An object of class \code{enact_selector_mtp}.
 #' @export
-mtp <- function(learners, metalearners = NULL) {
-  validate_learners(learners, metalearners, "mtp")
+mtp <- function(learners, metalearner = NULL) {
+  validate_learners(learners, metalearner, "mtp")
   structure(
-    list(learners = learners, metalearners = metalearners),
+    list(learners = learners, metalearner = metalearner),
     class = "enact_selector_mtp"
   )
 }
@@ -103,7 +108,7 @@ mtp <- function(learners, metalearners = NULL) {
 
 #' Add nuisance models to a study task
 #'
-#' Specifies the learners and metalearners for treatment mechanisms, outcome
+#' Specifies the learners and metalearner for treatment mechanisms, outcome
 #' regressions, censoring mechanisms, and/or MTP density ratio models.  Must be
 #' called after \code{\link{add_treatment}} / \code{\link{add_outcome}} and
 #' \code{\link{add_cv_folds}}.  Can only be called once per task.
@@ -177,7 +182,7 @@ add_models.enact_task <- function(task, ...) {
       inherits(sel$learners, "enfold_pipeline") ||
       inherits(sel$learners, "enfold_grid") ||
       inherits(sel$learners, "enfold_list")
-    needs_outer <- !is.null(sel$metalearners) ||
+    needs_outer <- !is.null(sel$metalearner) ||
       (!is_single && is.list(sel$learners) && length(sel$learners) > 1L)
     if (needs_outer && !has_outer) {
       stop("Multiple learners or a metalearner require outer CV. Set outer_cv in add_cv_folds().", call. = FALSE)
@@ -202,14 +207,14 @@ add_models.enact_task <- function(task, ...) {
     }
   }
 
-  build_enfold_task <- function(y, cols, learners, metalearners) {
+  build_enfold_task <- function(y, cols, learners, metalearner) {
     etask <- enfold::initialize_enfold(data, y, cols = cols)
     lrns <- wrap_learners(learners)
     for (lrn in lrns) {
       etask <- enfold::add_learners(etask, lrn)
     }
-    if (!is.null(metalearners)) {
-      etask <- enfold::add_metalearners(etask, metalearners)
+    if (!is.null(metalearner)) {
+      etask <- enfold::add_metalearners(etask, metalearner)
     }
     etask <- enfold::add_cv_folds(etask, cv = cv)
     etask
@@ -245,7 +250,7 @@ process_treatments_selector <- function(task, sel, data, is_df,
   }
 
   all_trt_names <- names(task$treatment_meta)
-  target_names <- resolve_selector_names(sel$names, all_trt_names, "treatment")
+  target_names <- resolve_which(sel$which_quo, all_trt_names, "treatment")
 
   for (nm in target_names) {
     col_nms <- vapply(
@@ -253,9 +258,13 @@ process_treatments_selector <- function(task, sel, data, is_df,
       function(m) m$label_info,
       character(1L)
     )
-    y_vec <- data[, col_nms[1L], drop = length(col_nms) == 1L]
+    y_vec <- if (length(col_nms) == 1L) {
+      data[, col_nms[1L]]
+    } else {
+      data[, col_nms, drop = FALSE]
+    }
 
-    etask <- build_enfold_task(y_vec, task$confounder_cols, sel$learners, sel$metalearners)
+    etask <- build_enfold_task(y_vec, task$confounder_cols, sel$learners, sel$metalearner)
     task$treatment_tasks[[nm]] <- etask
   }
 
@@ -276,7 +285,7 @@ process_outcomes_selector <- function(task, sel, data, is_df,
   }
 
   all_out_names <- names(task$outcomes)
-  target_names <- resolve_selector_names(sel$names, all_out_names, "outcome")
+  target_names <- resolve_which(sel$which_quo, all_out_names, "outcome")
 
   for (nm in target_names) {
     raw_y <- task$outcomes[[nm]]
@@ -287,7 +296,7 @@ process_outcomes_selector <- function(task, sel, data, is_df,
       conf_cols <- conf_cols[task$adjustment_sets[[nm]]]
     }
 
-    etask <- build_enfold_task(y_for_enfold, conf_cols, sel$learners, sel$metalearners)
+    etask <- build_enfold_task(y_for_enfold, conf_cols, sel$learners, sel$metalearner)
     task$outcome_tasks[[nm]] <- etask
   }
 
@@ -320,7 +329,7 @@ process_censoring_selector <- function(task, sel, data, is_df,
     cens_vec <- task$censoring[[nm]]
     attr(cens_vec, "cens_col") <- NULL
 
-    etask <- build_enfold_task(cens_vec, task$confounder_cols, sel$learners, sel$metalearners)
+    etask <- build_enfold_task(cens_vec, task$confounder_cols, sel$learners, sel$metalearner)
     task$censoring_tasks[[nm]] <- etask
   }
 
@@ -353,7 +362,8 @@ process_mtp_selector <- function(task, sel, data, is_df,
   }))
 
   cens_col_nms <- if (!is.null(task$censoring)) {
-    names(task$censoring)[vapply(task$censoring, Negate(is.null), logical(1L))]
+    non_null <- task$censoring[vapply(task$censoring, Negate(is.null), logical(1L))]
+    unique(unlist(lapply(non_null, function(v) attr(v, "cens_col")), use.names = FALSE))
   } else {
     character(0)
   }
@@ -363,7 +373,7 @@ process_mtp_selector <- function(task, sel, data, is_df,
 
   # One enfold task per MTP intervention (same master x/y, reused)
   for (nm in mtp_nms) {
-    etask <- build_enfold_task(y_const, mtp_cols, sel$learners, sel$metalearners)
+    etask <- build_enfold_task(y_const, mtp_cols, sel$learners, sel$metalearner)
     task$mtp_tasks[[nm]] <- etask
   }
 
@@ -382,27 +392,44 @@ process_mtp_selector <- function(task, sel, data, is_df,
 # Helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
-names_from_dots <- function(...) {
-  quo_names <- as.character(substitute(list(...))[-1L])
-  if (length(quo_names) == 0L) return(NULL)
-  quo_names
-}
+# Resolve a `which` quosure against the available identifier names.
+# NULL quo -> all; character -> validated against available; otherwise
+# tidyselect against a zero-row proxy whose columns are the available names.
+resolve_which <- function(quo, available, type_label) {
+  if (rlang::quo_is_null(quo)) return(available)
 
-resolve_selector_names <- function(requested, available, type_label) {
-  if (is.null(requested)) return(available)
-  bad <- setdiff(requested, available)
-  if (length(bad)) {
-    stop(sprintf(
-      "%s(s) not found in task: %s. Available: %s",
-      capitalize(type_label),
-      paste(bad, collapse = ", "),
-      paste(available, collapse = ", ")
-    ), call. = FALSE)
+  val <- tryCatch(rlang::eval_tidy(quo), error = function(e) NULL)
+  if (is.character(val)) {
+    bad <- setdiff(val, available)
+    if (length(bad)) {
+      stop(sprintf(
+        "%s(s) not found in task: %s. Available: %s",
+        capitalize(type_label),
+        paste(bad, collapse = ", "),
+        paste(available, collapse = ", ")
+      ), call. = FALSE)
+    }
+    return(val)
   }
-  requested
+
+  proxy <- as.data.frame(
+    matrix(numeric(0L), nrow = 0L, ncol = length(available)),
+    stringsAsFactors = FALSE
+  )
+  names(proxy) <- available
+  idx <- tryCatch(
+    tidyselect::eval_select(quo, proxy),
+    error = function(e) {
+      stop(sprintf(
+        "Cannot resolve `which` for %s selector. Use NULL, a character vector of identifiers, or a tidyselect expression.\nUnderlying error: %s",
+        type_label, conditionMessage(e)
+      ), call. = FALSE)
+    }
+  )
+  available[as.integer(idx)]
 }
 
-validate_learners <- function(learners, metalearners, label) {
+validate_learners <- function(learners, metalearner, label) {
   if (missing(learners) || is.null(learners)) {
     stop(sprintf("`%s`: `learners` is required.", label), call. = FALSE)
   }
@@ -410,9 +437,9 @@ validate_learners <- function(learners, metalearners, label) {
     inherits(learners, "enfold_pipeline") ||
     inherits(learners, "enfold_grid") ||
     inherits(learners, "enfold_list")
-  if (!is_single && is.list(learners) && length(learners) > 1L && is.null(metalearners)) {
+  if (!is_single && is.list(learners) && length(learners) > 1L && is.null(metalearner)) {
     stop(sprintf(
-      "`%s`: `metalearners` is required when `learners` is a list with multiple elements.",
+      "`%s`: `metalearner` is required when `learners` is a list with multiple elements.",
       label
     ), call. = FALSE)
   }

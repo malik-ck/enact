@@ -4,13 +4,13 @@
 \alias{censoring}
 \title{Specify censoring mechanism models}
 \usage{
-censoring(learners, metalearners = NULL)
+censoring(learners, metalearner = NULL)
 }
 \arguments{
 \item{learners}{A single \code{enfold_learner} (or pipeline/grid/list), or a
 list of such objects.  Required.}
 
-\item{metalearners}{A single \code{enfold_learner} created by a metalearner
+\item{metalearner}{A single \code{enfold_learner} created by a metalearner
 constructor (e.g. \code{mtl_superlearner()}).  Required when
 \code{learners} is a list with multiple elements.}
 }

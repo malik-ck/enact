@@ -1,4 +1,4 @@
-# ── Helper ──────────────────────────────────────────────────────────────────
+﻿# â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 make_data <- function(n = 100L) {
   set.seed(42L)
   data.frame(
@@ -14,15 +14,12 @@ make_data <- function(n = 100L) {
 
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
-  initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+  initiate_study(d, confounders = c(X1, X2), verbose = FALSE, confounder_labels = c("Confounder 1", "Confounder 2")) |>
+    add_treatment(A, label = "Treatment") |>
+    add_outcome(Y, "Y")
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# create_table_one()
-# ══════════════════════════════════════════════════════════════════════════════
-
+# Create table 1
 test_that("create_table_one rejects non-enact_task", {
   expect_error(create_table_one("not_a_task"), "enact_task")
 })

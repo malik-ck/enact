@@ -4,78 +4,91 @@
 
 #' Add a treatment to a study task
 #'
-#' Attaches a single treatment specification to an \code{enact_task}.  The
-#' column selection is resolved against the task's stored data immediately;
-#' metadata is recorded for downstream use.  Nuisance models are specified
-#' separately via \code{\link{add_models}}.
+#' Attaches a treatment specification to an \code{enact_task}.  Single-column
+#' treatments use the column name as their identifier by default; multi-column
+#' grouped treatments require an explicit \code{label} which then serves as
+#' the identifier in downstream selectors (e.g. \code{treatments("A", ...)})
+#' and tells \code{\link{add_models}} to build a single joint nuisance task
+#' over the grouped columns.
 #'
 #' @param task A \code{enact_task} object.
-#' @param name Character.  Name used to refer to this treatment in downstream
-#'   selectors (e.g. \code{treatments("A", ...)}).
 #' @param which <[`tidyselect`][tidyselect::language]> Treatment column(s) in
-#'   the study data.  Also accepts a character vector of column names or an
-#'   integer index vector.
-#' @param label Optional character string.  Display label for this treatment.
-#'
-#' @details
-#' Treatments are validated (must be numeric, binary coding is checked) and
-#' metadata is stored for downstream use.
+#'   the study data.  One column for atomic treatments, multiple for a
+#'   grouped (multivariate) treatment.  Also accepts a character vector of
+#'   column names or an integer index vector.
+#' @param label Character string used as the treatment's identifier.  For
+#'   single-column \code{which}, defaults to the column name.  Required when
+#'   \code{which} resolves to more than one column.
+#' @param column_labels Optional character vector of per-column display labels
+#'   for Table 1.  Named (matched to column names) or unnamed (positional,
+#'   same length as \code{which}).  Defaults to column names.
 #'
 #' @return The modified \code{enact_task}.
 #' @export
-add_treatment <- function(task, name, which, label = NULL) {
+add_treatment <- function(task, which, label = NULL, column_labels = NULL) {
   if (!inherits(task, "enact_task")) {
     stop("`task` must be an enact_task object.", call. = FALSE)
   }
-  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
-    stop("`name` must be a single non-empty character string.", call. = FALSE)
-  }
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L)) {
-    stop("`label` must be a single character string or NULL.", call. = FALSE)
-  }
-  if (!is.null(task$treatment_meta) && name %in% names(task$treatment_meta)) {
-    stop(
-      sprintf("Treatment name already exists in task: %s", name),
-      call. = FALSE
-    )
+  if (!is.null(label) && (!is.character(label) || length(label) != 1L ||
+                          is.na(label) || !nzchar(label))) {
+    stop("`label` must be a single non-empty character string or NULL.", call. = FALSE)
   }
 
   which_quo <- rlang::enquo(which)
   ctx <- task_resolution_ctx(task)
 
-  which_idx <- resolve_cols(which_quo, paste0(name, "$which"), ctx)
+  which_idx <- resolve_cols(which_quo, "which", ctx)
   if (is.null(which_idx) || length(which_idx) == 0L) {
-    stop(
-      sprintf("treatment `%s`: `which` resolved to no columns.", name),
-      call. = FALSE
-    )
+    stop("`which` resolved to no columns.", call. = FALSE)
+  }
+  col_nms <- names(which_idx)
+
+  if (length(col_nms) > 1L && is.null(label)) {
+    stop(sprintf(
+      "`label` is required when `which` resolves to multiple columns (%s). It becomes the group's identifier.",
+      paste(col_nms, collapse = ", ")
+    ), call. = FALSE)
+  }
+
+  identifier <- if (!is.null(label)) label else col_nms[1L]
+
+  if (!is.null(task$treatment_meta) && identifier %in% names(task$treatment_meta)) {
+    stop(sprintf("Treatment identifier already exists in task: %s", identifier), call. = FALSE)
+  }
+  if (!is.null(task$treatment_meta)) {
+    existing_cols <- unlist(lapply(task$treatment_meta, names), use.names = FALSE)
+    overlap <- intersect(existing_cols, col_nms)
+    if (length(overlap)) {
+      stop(sprintf(
+        "Treatment column(s) already attached to another treatment: %s",
+        paste(overlap, collapse = ", ")
+      ), call. = FALSE)
+    }
+  }
+
+  # For single-col with a user-supplied label and no explicit column_labels,
+  # the label doubles as the per-column display label.
+  col_labels <- if (length(col_nms) == 1L && !is.null(label) && is.null(column_labels)) {
+    setNames(label, col_nms)
+  } else {
+    resolve_column_labels(column_labels, col_nms, identifier)
   }
 
   treat_block <- extract_block(ctx$data, which_idx, ctx$is_df)
-  treat_col_names <- names(which_idx)
-
-  treat_results <- if (ctx$is_df) {
-    lapply(treat_col_names, function(col_nm) {
-      classify_treatment_col(treat_block[[col_nm]], col_nm)
-    })
-  } else {
-    lapply(seq_len(ncol(treat_block)), function(i) {
-      classify_treatment_col(treat_block[, i], treat_col_names[[i]])
-    })
-  }
-  names(treat_results) <- treat_col_names
-
-  meta <- lapply(treat_results, function(x) {
-    list(type = x$type, label_info = x$label_info)
+  meta <- lapply(seq_along(col_nms), function(i) {
+    col_nm <- col_nms[i]
+    col_vec <- if (ctx$is_df) treat_block[[col_nm]] else treat_block[, i]
+    cl <- classify_treatment_col(col_vec, col_nm)
+    list(type = cl$type, label_info = cl$label_info)
   })
-  lab <- if (!is.null(label)) label else name
+  names(meta) <- col_nms
 
   if (is.null(task$treatment_meta)) {
     task$treatment_meta <- list()
     task$treatment_labels <- character(0)
   }
-  task$treatment_meta[[name]] <- meta
-  task$treatment_labels[name] <- lab
+  task$treatment_meta[[identifier]] <- meta
+  task$treatment_labels[col_nms] <- col_labels
 
   task
 }
@@ -83,17 +96,18 @@ add_treatment <- function(task, name, which, label = NULL) {
 
 #' Add an outcome to a study task
 #'
-#' Attaches a single outcome specification to an \code{enact_task}.  Selections
-#' are resolved against the task's stored data immediately; the outcome block
-#' is extracted and censoring (if any) is validated.  Nuisance models are
-#' specified separately via \code{\link{add_models}}.
+#' Attaches an outcome specification to an \code{enact_task}.  A non-empty
+#' \code{label} is required and becomes the outcome's identifier used by
+#' downstream selectors (e.g. \code{outcomes("Y", ...)}).  Multi-column
+#' outcomes (multivariate \code{which}) are grouped under the single label.
+#' Nuisance models are specified separately via \code{\link{add_models}}.
 #'
 #' @param task A \code{enact_task} object.
-#' @param name Character.  Name used to refer to this outcome in downstream
-#'   selectors (e.g. \code{outcomes("Y", ...)}).
-#' @param which <[`tidyselect`][tidyselect::language]> Outcome column(s) in the
-#'   study data.  Also accepts a character vector of column names or an integer
-#'   index vector.
+#' @param which <[`tidyselect`][tidyselect::language]> Outcome column(s) in
+#'   the study data.  Also accepts a character vector of column names or an
+#'   integer index vector.
+#' @param label Character string.  Identifier and display label for this
+#'   outcome.  Required.
 #' @param censoring <[`tidyselect`][tidyselect::language]> Censoring indicator
 #'   column in the study data.  Values should be \code{0} (censored)
 #'   or \code{1} (observed).  Also accepts a character column name or integer
@@ -102,7 +116,6 @@ add_treatment <- function(task, name, which, label = NULL) {
 #'   indicator must be \code{0} wherever the outcome is \code{NA}.
 #'   When \code{NULL} and the outcome has no \code{NA}s, no censoring
 #'   is recorded.
-#' @param label Optional character string.  Display label for this outcome.
 #' @param contrasts List of contrast functions to apply to this outcome.
 #'  Each function should take two arguments: \code{reference} and \code{treatment}.
 #'  \code{\link{ate}}, \code{\link{log_relative_ate}}, and \code{\link{log_odds_ratio}}
@@ -111,38 +124,22 @@ add_treatment <- function(task, name, which, label = NULL) {
 #'   indices into the confounder block.  \code{NULL} (default) inherits the full
 #'   global confounder set.
 #'
-#' @details
-#' Outcomes are extracted and censoring is handled as follows:
-#' \enumerate{
-#'   \item If the outcome contains \code{NA} values and no censoring column was
-#'     specified, an error is raised.  The user must provide an explicit
-#'     censoring indicator that is \code{0} wherever the outcome is \code{NA}.
-#'   \item If a censoring column was specified, it is extracted and validated:
-#'     any row where the outcome is \code{NA} but the censoring indicator is
-#'     \code{1} (observed) triggers an error.
-#'   \item If no \code{NA}s are found and no censoring was given, censoring is
-#'     \code{NULL} for that outcome.
-#' }
-#'
 #' @return The modified \code{enact_task}.
 #' @export
 add_outcome <- function(
   task,
-  name,
   which,
+  label,
   censoring = NULL,
-  label = NULL,
   contrasts = list(ate()),
   adjustment_set = NULL
 ) {
   if (!inherits(task, "enact_task")) {
     stop("`task` must be an enact_task object.", call. = FALSE)
   }
-  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
-    stop("`name` must be a single non-empty character string.", call. = FALSE)
-  }
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L)) {
-    stop("`label` must be a single character string or NULL.", call. = FALSE)
+  if (missing(label) || !is.character(label) || length(label) != 1L ||
+      is.na(label) || !nzchar(label)) {
+    stop("`label` is required and must be a single non-empty character string.", call. = FALSE)
   }
   if (
     !is.list(contrasts) ||
@@ -166,23 +163,17 @@ add_outcome <- function(
       call. = FALSE
     )
   }
-  if (!is.null(task$outcomes) && name %in% names(task$outcomes)) {
-    stop(
-      sprintf("Outcome name already exists in task: %s", name),
-      call. = FALSE
-    )
+  if (!is.null(task$outcomes) && label %in% names(task$outcomes)) {
+    stop(sprintf("Outcome label already exists in task: %s", label), call. = FALSE)
   }
 
   which_quo <- rlang::enquo(which)
   censoring_quo <- rlang::enquo(censoring)
   ctx <- task_resolution_ctx(task)
 
-  which_idx <- resolve_cols(which_quo, paste0(name, "$which"), ctx)
+  which_idx <- resolve_cols(which_quo, paste0(label, "$which"), ctx)
   if (is.null(which_idx) || length(which_idx) == 0L) {
-    stop(
-      sprintf("outcome `%s`: `which` resolved to no columns.", name),
-      call. = FALSE
-    )
+    stop(sprintf("outcome `%s`: `which` resolved to no columns.", label), call. = FALSE)
   }
 
   if (!is.null(task$treatment_meta)) {
@@ -192,7 +183,7 @@ add_outcome <- function(
       stop(
         sprintf(
           "outcome `%s`: column(s) also appear in treatment: %s",
-          name,
+          label,
           paste(overlap, collapse = ", ")
         ),
         call. = FALSE
@@ -201,9 +192,8 @@ add_outcome <- function(
   }
 
   y <- extract_block(ctx$data, which_idx, ctx$is_df)
-  lab <- if (!is.null(label)) label else name
-  adj_idx <- resolve_adjustment_set(adjustment_set, task, name)
-  cens_vec <- resolve_censoring(censoring_quo, y, ctx, name)
+  adj_idx <- resolve_adjustment_set(adjustment_set, task, label)
+  cens_vec <- resolve_censoring(censoring_quo, y, ctx, label)
 
   if (is.null(task$outcomes)) {
     task$outcomes <- list()
@@ -212,11 +202,11 @@ add_outcome <- function(
     task$censoring <- list()
     task$outcome_contrasts <- list()
   }
-  task$outcomes[[name]] <- y
-  task$outcome_labels[name] <- lab
-  task$adjustment_sets[[name]] <- adj_idx
-  task$censoring[[name]] <- cens_vec
-  task$outcome_contrasts[[name]] <- contrasts
+  task$outcomes[[label]] <- y
+  task$outcome_labels[label] <- label
+  task$adjustment_sets[[label]] <- adj_idx
+  task$censoring[[label]] <- cens_vec
+  task$outcome_contrasts[[label]] <- contrasts
 
   task
 }
@@ -361,6 +351,35 @@ classify_treatment_col <- function(col, col_name) {
   } else {
     list(type = "numerical", label_info = col_name)
   }
+}
+
+resolve_column_labels <- function(user_labels, col_nms, identifier) {
+  if (is.null(user_labels)) return(setNames(col_nms, col_nms))
+  if (!is.character(user_labels)) {
+    stop(sprintf(
+      "treatment `%s`: `column_labels` must be a character vector.", identifier
+    ), call. = FALSE)
+  }
+  out <- setNames(col_nms, col_nms)
+  if (!is.null(names(user_labels))) {
+    bad <- setdiff(names(user_labels), col_nms)
+    if (length(bad)) {
+      stop(sprintf(
+        "treatment `%s`: `column_labels` names not in `which`: %s",
+        identifier, paste(bad, collapse = ", ")
+      ), call. = FALSE)
+    }
+    out[names(user_labels)] <- user_labels
+  } else {
+    if (length(user_labels) != length(col_nms)) {
+      stop(sprintf(
+        "treatment `%s`: `column_labels` has %d element(s) but `which` has %d column(s).",
+        identifier, length(user_labels), length(col_nms)
+      ), call. = FALSE)
+    }
+    out[] <- user_labels
+  }
+  out
 }
 
 resolve_adjustment_set <- function(sel, task, outcome_nm) {

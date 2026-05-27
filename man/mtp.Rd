@@ -4,13 +4,13 @@
 \alias{mtp}
 \title{Specify MTP density ratio models}
 \usage{
-mtp(learners, metalearners = NULL)
+mtp(learners, metalearner = NULL)
 }
 \arguments{
 \item{learners}{A single \code{enfold_learner} (or pipeline/grid/list), or a
 list of such objects.  Required.}
 
-\item{metalearners}{A single \code{enfold_learner} created by a metalearner
+\item{metalearner}{A single \code{enfold_learner} created by a metalearner
 constructor (e.g. \code{mtl_superlearner()}).  Required when
 \code{learners} is a list with multiple elements.}
 }
@@ -19,6 +19,5 @@ An object of class \code{enact_selector_mtp}.
 }
 \description{
 Selector for \code{\link{add_models}}.  Targets the 2N density ratio
-classifier for Modified Treatment Policies.  Replaces both treatment
-mechanism and censoring mechanism models for MTP estimation.
+classifier for Modified Treatment Policies.
 }

@@ -6,10 +6,9 @@
 \usage{
 add_outcome(
   task,
-  name,
   which,
+  label,
   censoring = NULL,
-  label = NULL,
   contrasts = list(ate()),
   adjustment_set = NULL
 )
@@ -17,12 +16,12 @@ add_outcome(
 \arguments{
 \item{task}{A \code{enact_task} object.}
 
-\item{name}{Character.  Name used to refer to this outcome in downstream
-selectors (e.g. \code{outcomes("Y", ...)}).}
+\item{which}{<\code{\link[tidyselect:language]{tidyselect}}> Outcome column(s) in
+the study data.  Also accepts a character vector of column names or an
+integer index vector.}
 
-\item{which}{<\code{\link[tidyselect:language]{tidyselect}}> Outcome column(s) in the
-study data.  Also accepts a character vector of column names or an integer
-index vector.}
+\item{label}{Character string.  Identifier and display label for this
+outcome.  Required.}
 
 \item{censoring}{<\code{\link[tidyselect:language]{tidyselect}}> Censoring indicator
 column in the study data.  Values should be \code{0} (censored)
@@ -32,8 +31,6 @@ Required when the outcome contains \code{NA} values.  The censoring
 indicator must be \code{0} wherever the outcome is \code{NA}.
 When \code{NULL} and the outcome has no \code{NA}s, no censoring
 is recorded.}
-
-\item{label}{Optional character string.  Display label for this outcome.}
 
 \item{contrasts}{List of contrast functions to apply to this outcome.
 Each function should take two arguments: \code{reference} and \code{treatment}.
@@ -48,21 +45,9 @@ global confounder set.}
 The modified \code{enact_task}.
 }
 \description{
-Attaches a single outcome specification to an \code{enact_task}.  Selections
-are resolved against the task's stored data immediately; the outcome block
-is extracted and censoring (if any) is validated.  Nuisance models are
-specified separately via \code{\link{add_models}}.
-}
-\details{
-Outcomes are extracted and censoring is handled as follows:
-\enumerate{
-\item If the outcome contains \code{NA} values and no censoring column was
-specified, an error is raised.  The user must provide an explicit
-censoring indicator that is \code{0} wherever the outcome is \code{NA}.
-\item If a censoring column was specified, it is extracted and validated:
-any row where the outcome is \code{NA} but the censoring indicator is
-\code{1} (observed) triggers an error.
-\item If no \code{NA}s are found and no censoring was given, censoring is
-\code{NULL} for that outcome.
-}
+Attaches an outcome specification to an \code{enact_task}.  A non-empty
+\code{label} is required and becomes the outcome's identifier used by
+downstream selectors (e.g. \code{outcomes("Y", ...)}).  Multi-column
+outcomes (multivariate \code{which}) are grouped under the single label.
+Nuisance models are specified separately via \code{\link{add_models}}.
 }

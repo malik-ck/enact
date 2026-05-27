@@ -2,23 +2,18 @@
 % Please edit documentation in R/check_balance.R
 \name{check_balance}
 \alias{check_balance}
-\title{Check covariate balance after fitting interventions}
+\title{Print a covariate balance summary from a study task}
 \usage{
-check_balance(task, threshold = 0.1)
+check_balance(task)
 }
 \arguments{
-\item{task}{An \code{enact_task} with clever covariates already populated
-(i.e. after \code{\link{fit_interventions}}).}
-
-\item{threshold}{Numeric.  SMD cutoff for counting balance violations.
-Defaults to \code{0.1}.}
+\item{task}{An \code{enact_task} with \code{balance_checks} populated by
+\code{\link{add_balance_checks}}.}
 }
 \value{
-The modified \code{enact_task} with \code{balance_checks} populated.
+The task, invisibly.
 }
 \description{
-For each outcome and non-reference intervention, computes standardized mean
-differences (SMDs) in confounders using clever covariates as IPW weights.
-Produces love plots and clever covariate density plots.  Results are stored
-in \code{task$balance_checks} as an \code{enact_balance_check} object.
+Prints the balance summary computed by \code{\link{add_balance_checks}} and
+returns the task invisibly so the function is safe to use in a pipe.
 }

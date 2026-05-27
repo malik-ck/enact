@@ -16,7 +16,7 @@ add_models(task, ...)
 The modified \code{enact_task}.
 }
 \description{
-Specifies the learners and metalearners for treatment mechanisms, outcome
+Specifies the learners and metalearner for treatment mechanisms, outcome
 regressions, censoring mechanisms, and/or MTP density ratio models.  Must be
 called after \code{\link{add_treatment}} / \code{\link{add_outcome}} and
 \code{\link{add_cv_folds}}.  Can only be called once per task.

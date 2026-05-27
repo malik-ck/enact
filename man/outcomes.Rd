@@ -4,16 +4,18 @@
 \alias{outcomes}
 \title{Specify outcome nuisance models}
 \usage{
-outcomes(..., learners, metalearners = NULL)
+outcomes(which = NULL, learners, metalearner = NULL)
 }
 \arguments{
-\item{\dots}{Optional outcome names (character strings or unquoted via
-tidyselect).  When empty, targets all outcomes.}
+\item{which}{Outcome identifiers to target.  Either \code{NULL} (the
+default, targets all outcomes), a character vector of outcome labels,
+or a tidyselect expression such as \code{starts_with("Y")} that is
+evaluated against the outcome labels at \code{\link{add_models}} time.}
 
 \item{learners}{A single \code{enfold_learner} (or pipeline/grid/list), or a
 list of such objects.  Required.}
 
-\item{metalearners}{A single \code{enfold_learner} created by a metalearner
+\item{metalearner}{A single \code{enfold_learner} created by a metalearner
 constructor (e.g. \code{mtl_superlearner()}).  Required when
 \code{learners} is a list with multiple elements.}
 }
@@ -22,6 +24,4 @@ An object of class \code{enact_selector_outcomes}.
 }
 \description{
 Selector for \code{\link{add_models}}.  Targets outcome regression models.
-When called without \code{...}, targets all outcomes.  Optionally accepts
-outcome names to target specific outcomes.
 }

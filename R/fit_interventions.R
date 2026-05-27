@@ -28,6 +28,13 @@ fit_interventions <- function(task, truncate = 1e-4) {
   if (is.null(task$treatment_tasks)) {
     stop("No treatment models found. Call add_models() with treatments() first.", call. = FALSE)
   }
+  uncovered_trt <- setdiff(names(task$treatment_meta), names(task$treatment_tasks))
+  if (length(uncovered_trt)) {
+    stop(sprintf(
+      "Treatment(s) without a nuisance task: %s. Cover them in add_models(treatments(...)).",
+      paste(uncovered_trt, collapse = ", ")
+    ), call. = FALSE)
+  }
   if (!is.numeric(truncate) || length(truncate) != 1L || truncate <= 0 || truncate >= 1) {
     stop("`truncate` must be a single numeric value in (0, 1).", call. = FALSE)
   }
@@ -177,6 +184,13 @@ fit_outcomes <- function(task) {
   }
   if (is.null(task$outcome_tasks)) {
     stop("No outcome models found. Call add_models() with outcomes() first.", call. = FALSE)
+  }
+  uncovered_out <- setdiff(names(task$outcomes), names(task$outcome_tasks))
+  if (length(uncovered_out)) {
+    stop(sprintf(
+      "Outcome(s) without a nuisance task: %s. Cover them in add_models(outcomes(...)).",
+      paste(uncovered_out, collapse = ", ")
+    ), call. = FALSE)
   }
   if (is.null(task$interventions)) {
     stop("No interventions defined. Call define_interventions() first.", call. = FALSE)

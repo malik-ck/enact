@@ -5,3 +5,5 @@
 .DS_Store
 .quarto
 .claude
+/.quarto/
+**/*.quarto_ipynb

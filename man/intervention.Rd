@@ -16,7 +16,9 @@ intervened treatment values.}
 \item{mtp}{Logical. If \code{TRUE}, the density ratio is estimated via the
 2n augmented dataset classification approach, which is required when the
 intervention depends on the natural value of treatment. If \code{FALSE},
-the density ratio is computed directly from the propensity score model.}
+the density ratio is computed directly from the propensity score model.
+Set this to TRUE of you have a modified treatment policy, or if your
+intervention is stochastic.}
 
 \item{label}{Character string.  Display label and identifier used by
 \code{\link{define_interventions}}.  Required.}

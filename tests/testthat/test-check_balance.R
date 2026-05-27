@@ -1,4 +1,4 @@
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 future::plan(future::sequential)
 
 make_data <- function(n = 200L) {
@@ -18,8 +18,8 @@ mtl <- enfold::mtl_selector("sel")
 make_ready_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -29,48 +29,48 @@ make_ready_task <- function(d = NULL) {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl)
   )
   fit_interventions(task)
 }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Input validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test_that("check_balance() rejects non-task", {
-  expect_error(check_balance("not_a_task"), "enact_task")
+test_that("add_balance_checks() rejects non-task", {
+  expect_error(add_balance_checks("not_a_task"), "enact_task")
 })
 
-test_that("check_balance() rejects task without clever covariates", {
+test_that("add_balance_checks() rejects task without clever covariates", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "treat"))
-  task <- add_models(task, treatments(learners = lrn, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn, metalearner = mtl))
   # fit_interventions NOT called
-  expect_error(check_balance(task), "fit_interventions")
+  expect_error(add_balance_checks(task), "fit_interventions")
 })
 
-test_that("check_balance() rejects invalid threshold", {
+test_that("add_balance_checks() rejects invalid threshold", {
   task <- make_ready_task()
-  expect_error(check_balance(task, threshold = 0), "threshold")
-  expect_error(check_balance(task, threshold = -1), "threshold")
-  expect_error(check_balance(task, threshold = c(0.1, 0.2)), "threshold")
+  expect_error(add_balance_checks(task, threshold = 0), "threshold")
+  expect_error(add_balance_checks(task, threshold = -1), "threshold")
+  expect_error(add_balance_checks(task, threshold = c(0.1, 0.2)), "threshold")
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Structure of returned object
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test_that("check_balance() returns enact_task with balance_checks", {
+test_that("add_balance_checks() returns enact_task with balance_checks", {
   task <- make_ready_task()
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   expect_true(inherits(task$balance_checks, "enact_balance_check"))
   expect_true(is.numeric(task$balance_checks$threshold))
@@ -79,7 +79,7 @@ test_that("check_balance() returns enact_task with balance_checks", {
 
 test_that("balance_checks contains correct per-outcome structure", {
   task <- make_ready_task()
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   oc <- task$balance_checks$outcomes$Y
   expect_true(is.list(oc$interventions))
@@ -97,7 +97,7 @@ test_that("balance_checks contains correct per-outcome structure", {
 
 test_that("SMD data.frame has one row per confounder", {
   task <- make_ready_task()
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   smd_df <- task$balance_checks$outcomes$Y$interventions$treat$smd_df
   expect_equal(nrow(smd_df), 2L)  # X1, X2
@@ -105,9 +105,9 @@ test_that("SMD data.frame has one row per confounder", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Labels — no raw variable names in plots
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Labels â€” no raw variable names in plots
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("confounder labels are used instead of raw names", {
   d <- make_data()
@@ -117,8 +117,8 @@ test_that("confounder labels are used instead of raw names", {
     verbose = FALSE
   )
   task <- task |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -128,11 +128,11 @@ test_that("confounder labels are used instead of raw names", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl)
   )
   task <- fit_interventions(task)
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   smd_df <- task$balance_checks$outcomes$Y$interventions$treat$smd_df
   expect_true("Confounder A" %in% smd_df$confounder)
@@ -142,13 +142,13 @@ test_that("confounder labels are used instead of raw names", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Violation counting
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("violations match |SMD| > threshold", {
   task <- make_ready_task()
-  task <- check_balance(task, threshold = 0.1)
+  task <- add_balance_checks(task, threshold = 0.1)
 
   smd_df <- task$balance_checks$outcomes$Y$interventions$treat$smd_df
   expected <- sum(abs(smd_df$smd) > 0.1)
@@ -157,18 +157,18 @@ test_that("violations match |SMD| > threshold", {
 
 test_that("threshold = Inf produces zero violations", {
   task <- make_ready_task()
-  task <- check_balance(task, threshold = Inf)
+  task <- add_balance_checks(task, threshold = Inf)
 
   expect_equal(task$balance_checks$outcomes$Y$interventions$treat$n_violations, 0L)
   expect_equal(task$balance_checks$outcomes$Y$total_violations, 0L)
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Multiple outcomes + censoring
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test_that("check_balance() handles multiple outcomes with censoring", {
+test_that("add_balance_checks() handles multiple outcomes with censoring", {
   set.seed(42L)
   n <- 300L
   d <- data.frame(
@@ -181,9 +181,9 @@ test_that("check_balance() handles multiple outcomes with censoring", {
   d$Y2 <- rnorm(n) + 0.5 * d$A
 
   task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y1", Y1, censoring = C, adjustment_set = c("X1", "X2")) |>
-    add_outcome("Y2", Y2)
+    add_treatment(A) |>
+    add_outcome(Y1, "Y1", censoring = C, adjustment_set = c("X1", "X2")) |>
+    add_outcome(Y2, "Y2")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -193,12 +193,12 @@ test_that("check_balance() handles multiple outcomes with censoring", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl),
-    censoring(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl),
+    censoring(learners = lrn, metalearner = mtl)
   )
   task <- fit_interventions(task)
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   expect_true(all(c("Y1", "Y2") %in% names(task$balance_checks$outcomes)))
 
@@ -212,15 +212,15 @@ test_that("check_balance() handles multiple outcomes with censoring", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # MTP interventions
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-test_that("check_balance() works with MTP interventions", {
+test_that("add_balance_checks() works with MTP interventions", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -230,12 +230,12 @@ test_that("check_balance() works with MTP interventions", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl),
-    mtp(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl),
+    mtp(learners = lrn, metalearner = mtl)
   )
   task <- fit_interventions(task)
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   oc <- task$balance_checks$outcomes$Y
   expect_true("shift" %in% names(oc$interventions))
@@ -243,13 +243,13 @@ test_that("check_balance() works with MTP interventions", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # print() and summary() methods
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("print.enact_balance_check() produces output", {
   task <- make_ready_task()
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   expect_output(print(task$balance_checks), "Balance check")
   expect_output(print(task$balance_checks), "threshold")
@@ -257,10 +257,28 @@ test_that("print.enact_balance_check() produces output", {
 
 test_that("summary.enact_balance_check() returns data.frame", {
   task <- make_ready_task()
-  task <- check_balance(task)
+  task <- add_balance_checks(task)
 
   s <- summary(task$balance_checks)
   expect_true(is.data.frame(s))
   expect_true(all(c("Outcome", "Intervention", "confounder", "smd", "abs_smd", "violation") %in% names(s)))
   expect_true(nrow(s) > 0)
+})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# check_balance() sugar
+# ──────────────────────────────────────────────────────────────────────────────
+
+test_that("check_balance() errors when balance_checks are missing", {
+  task <- make_ready_task()
+  expect_error(check_balance(task), "add_balance_checks")
+})
+
+test_that("check_balance() prints and invisibly returns the task", {
+  task <- make_ready_task()
+  task <- add_balance_checks(task)
+  expect_output(check_balance(task), "Outcome")
+  out <- utils::capture.output(ret <- check_balance(task))
+  expect_identical(ret, task)
 })

@@ -278,12 +278,20 @@ summarize_fwb <- function(tsm_matrix, contrasts, ref_idx, intervention_labels,
     upper <- all_estimates + 1.96 * all_se
   }
 
+  # Two-sided bootstrap p-value against 0.
+  p_value <- apply(all_boot, 2L, function(col) {
+    col <- col[!is.na(col)]
+    if (!length(col)) return(NA_real_)
+    pmin(2 * min(mean(col <= 0), mean(col >= 0)), 1)
+  })
+
   data.frame(
     Contrast = all_labels,
     Estimate = all_estimates,
     SE = all_se,
     Lower_CI = lower,
     Upper_CI = upper,
+    P_value = p_value,
     row.names = NULL,
     stringsAsFactors = FALSE
   )

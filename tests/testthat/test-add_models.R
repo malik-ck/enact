@@ -1,4 +1,4 @@
-# ── Helper ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 make_data <- function(n = 100L) {
   set.seed(42L)
   data.frame(
@@ -17,8 +17,8 @@ mtl <- enfold::mtl_superlearner("sl", loss_fun = enfold::loss_logistic())
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
 }
 
 make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
@@ -26,28 +26,29 @@ make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv)
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Selector constructors
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("treatments() creates selector with correct class", {
   sel <- treatments(learners = lrn)
   expect_s3_class(sel, "enact_selector_treatments")
-  expect_null(sel$names)
+  expect_true(rlang::quo_is_null(sel$which_quo))
   expect_identical(sel$learners, lrn)
-  expect_null(sel$metalearners)
+  expect_null(sel$metalearner)
 })
 
-test_that("treatments() with names stores them", {
+test_that("treatments() with which stores the quosure", {
   sel <- treatments("A", learners = lrn)
-  expect_equal(sel$names, "A")
+  expect_false(rlang::quo_is_null(sel$which_quo))
+  expect_identical(rlang::eval_tidy(sel$which_quo), "A")
 })
 
 test_that("outcomes() creates selector with correct class", {
-  sel <- outcomes(learners = lrn, metalearners = mtl)
+  sel <- outcomes(learners = lrn, metalearner = mtl)
   expect_s3_class(sel, "enact_selector_outcomes")
-  expect_null(sel$names)
-  expect_identical(sel$metalearners, mtl)
+  expect_true(rlang::quo_is_null(sel$which_quo))
+  expect_identical(sel$metalearner, mtl)
 })
 
 test_that("censoring() creates selector with correct class", {
@@ -64,13 +65,13 @@ test_that("treatments() errors without learners", {
   expect_error(treatments(), "required")
 })
 
-test_that("treatments() errors with multiple learners but no metalearners", {
-  expect_error(treatments(learners = list(lrn, lrn)), "metalearners")
+test_that("treatments() errors with multiple learners but no metalearner", {
+  expect_error(treatments(learners = list(lrn, lrn)), "metalearner")
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # add_models() validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() rejects calls without selectors", {
   task <- make_task_with_folds()
@@ -98,7 +99,7 @@ test_that("add_models() rejects multiple learners without outer CV", {
   task <- make_task()
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = NULL)
   expect_error(
-    add_models(task, treatments(learners = list(lrn, lrn), metalearners = mtp)),
+    add_models(task, treatments(learners = list(lrn, lrn), metalearner = mtp)),
     "outer CV"
   )
 })
@@ -120,9 +121,9 @@ test_that("add_models() rejects duplicate calls", {
   )
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # add_models() with treatments()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() with treatments() creates treatment tasks and specs", {
   task <- make_task_with_folds()
@@ -136,9 +137,9 @@ test_that("add_models() with named treatments() targets specific treatment", {
   d$A2 <- rbinom(nrow(d), 1L, 0.5)
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
   task <- task |>
-    add_treatment("A", A) |>
-    add_treatment("A2", A2) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_treatment(A2) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, treatments("A", learners = lrn))
 
@@ -154,13 +155,26 @@ test_that("add_models() with treatments() errors on unknown name", {
   )
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+test_that("add_models() with grouped treatments builds one task over all group cols", {
+  d <- make_data()
+  d$A2 <- rbinom(nrow(d), 1L, 0.5)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment(c(A, A2), label = "A_grp") |>
+    add_outcome(Y, "Y") |>
+    add_cv_folds(inner_cv = 2L, outer_cv = 2L)
+  task <- add_models(task, treatments(learners = lrn))
+  expect_true("A_grp" %in% names(task$treatment_tasks))
+  expect_false("A" %in% names(task$treatment_tasks))
+  expect_false("A2" %in% names(task$treatment_tasks))
+})
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # add_models() with outcomes()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() with outcomes() creates outcome tasks and specs", {
   task <- make_task_with_folds()
-  task <- add_models(task, outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn, metalearner = mtl))
 
   expect_true("Y" %in% names(task$outcome_tasks))
 })
@@ -169,9 +183,9 @@ test_that("add_models() with named outcomes() targets specific outcome", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE)
   task <- task |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y) |>
-    add_outcome("Z", Z)
+    add_treatment(A) |>
+    add_outcome(Y, "Y") |>
+    add_outcome(Z, "Z")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, outcomes("Y", learners = lrn))
 
@@ -179,9 +193,9 @@ test_that("add_models() with named outcomes() targets specific outcome", {
   expect_false("Z" %in% names(task$outcome_tasks))
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # add_models() with censoring()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() with censoring() creates tasks for censored outcomes", {
   d <- make_data()
@@ -189,8 +203,8 @@ test_that("add_models() with censoring() creates tasks for censored outcomes", {
   d$C[c(2, 5)] <- 0L
   task <- initiate_study(d, confounders = X1, verbose = FALSE)
   task <- task |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y, censoring = C)
+    add_treatment(A) |>
+    add_outcome(Y, "Y", censoring = C)
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- add_models(task, censoring(learners = lrn))
 
@@ -205,9 +219,9 @@ test_that("add_models() with censoring() warns when no outcomes have censoring",
   )
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # add_models() with mtp()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() with mtp() creates MTP tasks", {
   task <- make_task_with_folds()
@@ -216,7 +230,7 @@ test_that("add_models() with mtp() creates MTP tasks", {
     mtp_intervention(function(a, l) a + 0.5, label = "shift"),
     static_intervention(1, label = "static")
   )
-  task <- add_models(task, mtp(learners = lrn, metalearners = mtl), treatments(learners = lrn))
+  task <- add_models(task, mtp(learners = lrn, metalearner = mtl), treatments(learners = lrn))
 
   expect_true("shift" %in% names(task$mtp_tasks))
   expect_s3_class(task$mtp_tasks[["shift"]], "enfold_task")
@@ -243,15 +257,15 @@ test_that("add_models() with mtp() requires interventions to be defined", {
   )
 })
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Combined selectors
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("add_models() with multiple selectors in one call", {
   task <- make_task_with_folds()
   task <- add_models(task,
     treatments(learners = lrn),
-    outcomes(learners = lrn, metalearners = mtl)
+    outcomes(learners = lrn, metalearner = mtl)
   )
 
   expect_true("A" %in% names(task$treatment_tasks))
@@ -261,8 +275,8 @@ test_that("add_models() with multiple selectors in one call", {
 test_that("full pipeline: initiate -> add -> folds -> interventions -> add_models", {
   d <- make_data()
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y, censoring = NULL) |>
+    add_treatment(A) |>
+    add_outcome(Y, "Y", censoring = NULL) |>
     add_cv_folds(inner_cv = 2L, outer_cv = 2L) |>
     define_interventions(static_intervention(1, label = "static"))
 

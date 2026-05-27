@@ -4,30 +4,32 @@
 \alias{add_treatment}
 \title{Add a treatment to a study task}
 \usage{
-add_treatment(task, name, which, label = NULL)
+add_treatment(task, which, label = NULL, column_labels = NULL)
 }
 \arguments{
 \item{task}{A \code{enact_task} object.}
 
-\item{name}{Character.  Name used to refer to this treatment in downstream
-selectors (e.g. \code{treatments("A", ...)}).}
-
 \item{which}{<\code{\link[tidyselect:language]{tidyselect}}> Treatment column(s) in
-the study data.  Also accepts a character vector of column names or an
-integer index vector.}
+the study data.  One column for atomic treatments, multiple for a
+grouped (multivariate) treatment.  Also accepts a character vector of
+column names or an integer index vector.}
 
-\item{label}{Optional character string.  Display label for this treatment.}
+\item{label}{Character string used as the treatment's identifier.  For
+single-column \code{which}, defaults to the column name.  Required when
+\code{which} resolves to more than one column.}
+
+\item{column_labels}{Optional character vector of per-column display labels
+for Table 1.  Named (matched to column names) or unnamed (positional,
+same length as \code{which}).  Defaults to column names.}
 }
 \value{
 The modified \code{enact_task}.
 }
 \description{
-Attaches a single treatment specification to an \code{enact_task}.  The
-column selection is resolved against the task's stored data immediately;
-metadata is recorded for downstream use.  Nuisance models are specified
-separately via \code{\link{add_models}}.
-}
-\details{
-Treatments are validated (must be numeric, binary coding is checked) and
-metadata is stored for downstream use.
+Attaches a treatment specification to an \code{enact_task}.  Single-column
+treatments use the column name as their identifier by default; multi-column
+grouped treatments require an explicit \code{label} which then serves as
+the identifier in downstream selectors (e.g. \code{treatments("A", ...)})
+and tells \code{\link{add_models}} to build a single joint nuisance task
+over the grouped columns.
 }

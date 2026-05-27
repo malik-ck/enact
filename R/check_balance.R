@@ -1,8 +1,8 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# check_balance — per-outcome covariate balance diagnostics
+# add_balance_checks — per-outcome covariate balance diagnostics
 # ══════════════════════════════════════════════════════════════════════════════
 
-#' Check covariate balance after fitting interventions
+#' Add covariate balance diagnostics to a study task
 #'
 #' For each outcome and non-reference intervention, computes standardized mean
 #' differences (SMDs) in confounders using clever covariates as IPW weights.
@@ -17,7 +17,7 @@
 #' @return The modified \code{enact_task} with \code{balance_checks} populated.
 #' @importFrom rlang .data
 #' @export
-check_balance <- function(task, threshold = 0.1) {
+add_balance_checks <- function(task, threshold = 0.1) {
   if (!inherits(task, "enact_task")) {
     stop("`task` must be an enact_task object.", call. = FALSE)
   }
@@ -250,6 +250,27 @@ print.enact_balance_check <- function(x, ...) {
   print(tbl, row.names = FALSE)
   invisible(x)
 }
+
+#' Print a covariate balance summary from a study task
+#'
+#' Prints the balance summary computed by \code{\link{add_balance_checks}} and
+#' returns the task invisibly so the function is safe to use in a pipe.
+#'
+#' @param task An \code{enact_task} with \code{balance_checks} populated by
+#'   \code{\link{add_balance_checks}}.
+#' @return The task, invisibly.
+#' @export
+check_balance <- function(task) {
+  if (!inherits(task, "enact_task")) {
+    stop("`task` must be an enact_task object.", call. = FALSE)
+  }
+  if (is.null(task$balance_checks)) {
+    stop("No balance checks found. Call add_balance_checks() first.", call. = FALSE)
+  }
+  print(summary(task$balance_checks), row.names = FALSE)
+  invisible(task)
+}
+
 
 #' @export
 summary.enact_balance_check <- function(object, ...) {

@@ -60,3 +60,10 @@ print.enact_task_stripped <- function(x, ...) {
   print(names(x))
   invisible(x)
 }
+
+
+#' @export
+summary.enact_task_stripped <- function(object, digits = 3L, ...) {
+  print_tmle_results(object$tmle_results, digits = digits)
+  invisible(object)
+}

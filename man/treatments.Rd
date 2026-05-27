@@ -4,16 +4,18 @@
 \alias{treatments}
 \title{Specify treatment nuisance models}
 \usage{
-treatments(..., learners, metalearners = NULL)
+treatments(which = NULL, learners, metalearner = NULL)
 }
 \arguments{
-\item{\dots}{Optional treatment names (character strings or unquoted via
-tidyselect).  When empty, targets all treatments.}
+\item{which}{Treatment identifiers to target.  Either \code{NULL} (the
+default, targets all treatments), a character vector of treatment names,
+or a tidyselect expression such as \code{starts_with("A")} that is
+evaluated against the treatment names at \code{\link{add_models}} time.}
 
 \item{learners}{A single \code{enfold_learner} (or pipeline/grid/list), or a
 list of such objects.  Required.}
 
-\item{metalearners}{A single \code{enfold_learner} created by a metalearner
+\item{metalearner}{A single \code{enfold_learner} created by a metalearner
 constructor (e.g. \code{mtl_superlearner()}).  Required when
 \code{learners} is a list with multiple elements.}
 }
@@ -22,6 +24,4 @@ An object of class \code{enact_selector_treatments}.
 }
 \description{
 Selector for \code{\link{add_models}}.  Targets treatment mechanism models.
-When called without \code{...}, targets all treatments.  Optionally accepts
-treatment names to target specific treatments.
 }

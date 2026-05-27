@@ -1,0 +1,308 @@
+---
+title: "Getting started with enact"
+vignette: >
+  %\VignetteIndexEntry{Getting started with enact}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(enact)
+library(enfold)
+library(rticles)
+set.seed(443)
+```
+
+## Overview
+
+`enact` is a package for estimating the effects of interventions via TMLE.
+What differentiates it from other packages is its composability: it follows
+your study from start to finish, handling the full implementation of a complex study
+protocol and bundling all results in one neat object. 
+
+It is also designed to be granular. Rather than providing monolithic functions that require you
+to specify your entire study from start to finish at call time, you can
+solve small tasks and review before moving on. This mirrors how carrying out studies
+with a study protocol is approached. For example, if you wanted to investigate
+estimated clever covariates, you can do so before estimating target parameters 
+and peeking at results. This design has a few advantages:
+
+- **Common metadata.** For example, a label specified for a variable is stored on the task, and
+creating table 1's or plots will always know what you want your variables to be named.
+Rather than interfacing packages for common reporting tasks and outcomes repeatedly,
+`enact` interfaces them for you.
+- **Flexible intervention specification.** `enact` requires you to specify interventions
+explicitly, and has support for complex interventions. Modified treatment policies can
+be specified and are estimated via a density classification trick.
+- **Flexible learning.** `enact` uses `enfold` for learning tasks, which is a modern
+model ensembling package boasting many features. You can send learners to different
+treatment or outcome columns, giving you full control over how nuisance models are
+estimated.
+
+This vignette will introduce a basic workflow via `enact`.
+
+## Running example
+
+Suppose we followed a cohort of rheumatoid arthritis patients that were treated with
+a Janus Kinase inhibitor (JAKi), a Tumor Necrosis Factor inhibitor (TNFi), or some
+control treatment. We want to estimate risk differences and relative risks for
+mortality and herpes zoster incidence, adjusting for age, sex, herpes zoster history,
+and a disease score. Let us take a look at the (simulated) data:
+
+```{r data}
+data("enact_demo")
+head(enact_demo)
+
+nrow(enact_demo)
+```
+
+Looks straightforward, with one complication: the herpes zoster outcome has some missings.
+The variable \code{censoring_hz} indicates missing outcomes. We will handle this downstream.
+
+## Setting up a study
+
+To set up a study, we use `initiate_study`. We set `verbose = TRUE`,
+which prints useful information when extending the task.
+
+```{r init}
+my_enact_study <- initiate_study(
+  data = enact_demo,
+  confounders = c("age", "sex", "hz_history", "disease_score"),
+  confounder_labels = c("Age", "Sex", "HZ history", "Disease score"),
+  verbose = TRUE,
+  cluster = NULL
+)
+my_enact_study
+```
+
+We can now tell the task what are treatment and outcome variables are.
+We have two of each, so we add two of each and add labels for reporting.
+Since the herpes zoster outcome has censoring, we tell the task which column
+has information on censoring. The convention is `0` for censored observations,
+and `1` for uncensored observations. `contrasts` tells the task which
+target parameters we are looking to estimate.
+
+```{r tx and outcome}
+my_enact_study <- my_enact_study |>
+  add_treatment(which = "tx_jaki", label = "JAKi") |>
+  add_treatment(which = "tx_tnfi", label = "TNF inhibitor") |>
+  add_outcome(
+    which = "outcome_mortality",
+    label = "Mortality",
+    contrasts = list(ate(), log_relative_ate())
+  ) |>
+  add_outcome(
+    which = "outcome_hz",
+    label = "Herpes zoster",
+    censoring = "censoring_hz",
+    contrasts = list(ate(), log_relative_ate())
+  )
+```
+
+In `add_outcome()`, we can also specify adjustment sets on a
+per-outcome basis, if we wanted.
+
+We can now also create a Table 1. We tell `enact` to stratify 
+by treatment groups. Under the hood, `create_table_one` uses
+the `gtsummary` package.
+
+```{r table one}
+my_enact_study <- my_enact_study |>
+  create_table_one(stratify = c("tx_jaki", "tx_tnfi"))
+
+my_enact_study$table_one
+```
+
+## Defining interventions
+
+We will add four interventions. Three of them are just:
+set `tx_jaki` and `tx_tnfi` to zero (everyone receives control),
+or set either of them to one (everyone receives a JAKi, everyone receives a TNFi).
+The last is a stochastic treatment that treats with a JAKi half the time,
+and otherwise assigns control.
+
+The stochastic intervention requires us to specify a custom intervention.
+We can do so via `intervention()`. This is how it works:
+
+```{r custom intervention}
+my_intervention <- intervention(
+  intervene = function(a, l) {
+    a[] <- 0
+    a$tx_tnfi <- rbinom(nrow(a), 1, 0.5)
+    a
+  },
+  mtp = TRUE,
+  label = "Stochastic"
+)
+```
+
+`intervene` is a function that gives us our treatment variables and our global confounder
+sets and lets us meddle with them however. We just need to remember to return the modified
+treatment data in `a` at the end. The `mtp` flag specifies whether the density ratio
+classification trick should be used. This is especially useful for modified treatment
+policies (hence the argument name), but applicable whenever the natural and intervened-on
+treatment distributions share the same support (?).
+
+We now add this intervention to our task, as well as a few intervention templates.
+`static_intervention` sets all treatments to the same value, and `intervention_arm`
+sets the specified column to `1` and others to `0`. The `reference` argument
+tells the task which intervention to treat as the reference when formatting results.
+
+```{r interventions}
+my_enact_study <- my_enact_study |>
+  define_interventions(
+    my_intervention,
+    static_intervention(0, label = "Control"),
+    intervention_arm("tx_jaki", label = "JAKi"),
+    intervention_arm("tx_tnfi", "TNFi"),
+    reference = "Control"
+  )
+```
+
+## Defining learners via enfold
+
+We will now add specify some learners. This is functionality of the
+`enfold` package, and you are encouraged to read its vignette to
+understand how it works. We will provide a basic ensemble here:
+a mean learner, a generalized linear model, a generalized additive model,
+Multivariate Adaptive Regression Splines, and gradient boosting.
+For gradient boosting, we use the list learner concept in `enfold`
+to fit the model once and get results after 10, 20, ..., 100 iterations.
+We also specify a superlearner as our metalearner.
+
+```{r learners}
+my_mean <- lrn_mean("Mean")
+my_glm <- lrn_glm("GLM", family = binomial())
+my_gam <- lrn_gam("GAM", binomial())
+my_xgb <- lrn_xgboost(
+  "XGB",
+  objective = "reg:logistic",
+  eta = 0.1,
+  nrounds = 100L,
+  n_snapshots = 10L
+)
+
+my_learners <- list(my_mean, my_glm, my_gam, my_xgb)
+my_superlearner <- mtl_superlearner("SL", loss_fun = loss_logistic())
+```
+
+We can now add them to the task. Since we have an intervention with `mtp = TRUE`
+we need to provide learners for those interventions that can output classification probabilities
+for a binary outcome. The same applies to censoring. The selector functions
+`treatments()` and `outcomes()` have an optional argument named `which` that
+we can use to assign particular learner-metalearner combinations to individual treatments
+or outcomes via their labels. We do not use this functionality here.
+
+Before adding learners, we also need to specify cross-validation folds. We use
+`inner_cv = 2L` and `outer_cv = 2L` to decrease runtime. You probably want to increase
+these for a real study. `inner_cv` controls how many folds are used to build ensembles.
+`outer_cv` controls how many ensembles are built, and if it is not `NULL`
+cross-validated predictions are estimated. **This is necessary for many
+learners when using TMLE**. If our task has a cluster variable, cross-validation
+is clustered automatically.
+
+```{r add learners}
+my_enact_study <- my_enact_study |>
+  add_cv_folds(inner_cv = 2L, outer_cv = 2L) |>
+  add_models(
+    treatments(learners = my_learners, metalearner = my_superlearner),
+    outcomes(learners = my_learners, metalearner = my_superlearner),
+    mtp(learners = my_learners, metalearner = my_superlearner),
+    censoring(learners = my_learners, metalearner = my_superlearner)
+  )
+```
+
+## Fitting interventions and checking balance
+
+Everything is specified now and we can fit! `enact` explicitly separates
+fitting interventions and outcomes. We make use of this to perform some
+balance checks on our intervention (treatment and censoring) models.
+
+For this purpose, we use the `add_balance_checks()` function. Using
+`check_balance()` then prints a balance check summary, but the task also
+stores love plots and balance tasks. These are included in the final report
+(see below), so you don't have to extract them just yet, if you don't want to.
+
+```{r fit}
+my_enact_study <- suppressWarnings(
+  my_enact_study |>
+    fit_interventions() |>
+    add_balance_checks() |>
+    check_balance()
+)
+```
+
+There are many violations here, which might be a good sign to investigate
+our learners in more detail or change estimation strategies. We'll let this
+pass for the vignette. However, notice how we were able to detect the
+balance issue here *before calculating any results*. In a real study,
+we could fix this problem now without peeking.
+
+(It seems the balance checks didn't print for the reference intervention.
+That's... a bug, right?)
+
+## Estimate results via TMLE
+
+Almost there! We now also fit outcomes and then target all nuisance estimates
+via TMLE. For this, we use `do_tmle()`. Since all our outcomes are binary,
+we can just tell the task to target all outcomes via a binomial fluctuation.
+
+Note that `enact` estimates standard errors for TMLE via a fractional weighted
+(Bayesian) bootstrap of the targeting step. In some simulation studies, this
+has markedly better (frequentist) properties than using the variance of the
+efficient influence function. If we have clusters, the bootstrap is clustered
+at the cluster level.
+
+After targeting, our task object provides TMLE results via `summary()`.
+
+```{r tmle}
+my_enact_study <- suppressWarnings(
+  my_enact_study |>
+    fit_outcomes() |>
+    do_tmle(
+      which = all_outcomes(),
+      fluctuation_family = binomial()
+    )
+)
+
+summary(my_enact_study)
+```
+
+## Strip and report
+
+We have successfully estimated everything! At this point, there
+are two more functions to know of. 
+
+The first one is `strip()`. Calling `strip()` on a task object
+removes everything from it that is not a result. This is helpful in cases
+where you want to send results to colleagues for reporting,
+but can't send the full task for data privacy reasons. By default,
+`strip()` keeps table 1's, balance checks, and TMLE results.
+
+After calling `strip()`, we can call `report()` on the stripped object.
+Calling `report()` creates a .docx file for Word or a .tex/.zip file for
+LaTeX. For the latter, one can use templates from the `rticles` package.
+This report can be used as a basis for a manuscript, or to copy paste results
+cleanly. The code below puts this report in a temporary directory.
+It can't be shown in the vignette, but if you re-run it you can investigate
+the results in that temporary folder!
+
+```{r report}
+report_dir <- tempfile(fileext = ".zip")
+
+my_enact_study <- my_enact_study |>
+  strip()
+
+make_report <- report(
+  task = my_enact_study,
+  output_file = report_dir,
+  format = "tex",
+  template = rticles::sage_article(),
+  include_love_plots = TRUE,
+  include_density_plots = TRUE
+)
+```

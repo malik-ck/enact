@@ -1,4 +1,4 @@
-# ── Helper ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 make_data <- function(n = 100L) {
   set.seed(42L)
   data.frame(
@@ -16,8 +16,8 @@ mtl <- enfold::mtl_selector("sel")
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
 }
 
 make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
@@ -25,9 +25,9 @@ make_task_with_folds <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   add_cv_folds(task, inner_cv = inner_cv, outer_cv = outer_cv)
 }
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # define_interventions() now populates intervened_data
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("define_interventions() populates intervened_data", {
   task <- make_task()
@@ -61,9 +61,9 @@ test_that("define_interventions() appends intervened_data on second call", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# fit_interventions() — input validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# fit_interventions() â€” input validation
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fit_interventions() rejects non-task", {
   expect_error(fit_interventions("not_a_task"), "enact_task")
@@ -80,19 +80,46 @@ test_that("fit_interventions() rejects task without treatment models", {
   expect_error(fit_interventions(task), "add_models")
 })
 
+test_that("fit_interventions() errors when a treatment lacks a nuisance task", {
+  d <- make_data()
+  d$A2 <- rbinom(nrow(d), 1L, 0.5)
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment(A) |>
+    add_treatment(A2) |>
+    add_outcome(Y, "Y") |>
+    add_cv_folds(inner_cv = 2L, outer_cv = 2L) |>
+    define_interventions(static_intervention(1, label = "static"))
+  task <- add_models(task, treatments("A", learners = lrn_glm, metalearner = mtl),
+                    outcomes(learners = lrn_glm, metalearner = mtl))
+  expect_error(fit_interventions(task), "A2")
+})
+
+test_that("fit_outcomes() errors when an outcome lacks a nuisance task", {
+  d <- make_data()
+  d$Y2 <- rnorm(nrow(d))
+  task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
+    add_treatment(A) |>
+    add_outcome(Y, "Y") |>
+    add_outcome(Y2, "Y2") |>
+    add_cv_folds(inner_cv = 2L, outer_cv = 2L) |>
+    define_interventions(static_intervention(1, label = "static"))
+  task <- add_models(task, outcomes("Y", learners = lrn_glm, metalearner = mtl))
+  expect_error(fit_outcomes(task), "Y2")
+})
+
 test_that("fit_interventions() rejects invalid truncate", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, treatments(learners = lrn, metalearners = mtl), outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn, metalearner = mtl), outcomes(learners = lrn, metalearner = mtl))
   expect_error(fit_interventions(task, truncate = 0), "truncate")
   expect_error(fit_interventions(task, truncate = 1), "truncate")
   expect_error(fit_interventions(task, truncate = c(0.1, 0.2)), "truncate")
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# fit_outcomes() — input validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# fit_outcomes() â€” input validation
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fit_outcomes() rejects non-task", {
   expect_error(fit_outcomes("not_a_task"), "enact_task")
@@ -106,19 +133,19 @@ test_that("fit_outcomes() rejects task without outcome models", {
 
 test_that("fit_outcomes() rejects task without interventions", {
   task <- make_task_with_folds()
-  task <- add_models(task, outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn, metalearner = mtl))
   expect_error(fit_outcomes(task), "define_interventions")
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# fit_interventions() — fitting and clever covariates
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# fit_interventions() â€” fitting and clever covariates
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fit_interventions() fits treatment tasks and creates clever covariates", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, treatments(learners = lrn, metalearners = mtl), outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn, metalearner = mtl), outcomes(learners = lrn, metalearner = mtl))
 
   task <- fit_interventions(task)
 
@@ -144,9 +171,9 @@ test_that("fit_interventions() MTP clever covariates are positive", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl),
-    mtp(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl),
+    mtp(learners = lrn, metalearner = mtl)
   )
 
   task <- fit_interventions(task)
@@ -159,7 +186,7 @@ test_that("fit_interventions() MTP clever covariates are positive", {
 test_that("fit_interventions() truncation bounds the clever covariate", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, treatments(learners = lrn, metalearners = mtl), outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn, metalearner = mtl), outcomes(learners = lrn, metalearner = mtl))
 
   task <- fit_interventions(task, truncate = 0.1)
 
@@ -169,14 +196,14 @@ test_that("fit_interventions() truncation bounds the clever covariate", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# fit_outcomes() — fitting and predictions
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# fit_outcomes() â€” fitting and predictions
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fit_outcomes() fits and creates outcome predictions", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn, metalearner = mtl))
 
   task <- fit_outcomes(task)
 
@@ -197,7 +224,7 @@ test_that("fit_outcomes() produces predictions for all interventions", {
     static_intervention(1, label = "treat"),
     static_intervention(0, label = "control")
   )
-  task <- add_models(task, outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn, metalearner = mtl))
 
   task <- fit_outcomes(task)
 
@@ -207,16 +234,16 @@ test_that("fit_outcomes() produces predictions for all interventions", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Independence — fit_outcomes works without fit_interventions
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Independence â€” fit_outcomes works without fit_interventions
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fit_outcomes() works independently of fit_interventions()", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn, metalearner = mtl))
 
-  # Do NOT call fit_interventions — go straight to fit_outcomes
+  # Do NOT call fit_interventions â€” go straight to fit_outcomes
   task <- fit_outcomes(task)
 
   expect_true(!is.null(task$outcome_predictions))
@@ -226,9 +253,9 @@ test_that("fit_outcomes() works independently of fit_interventions()", {
 test_that("fit_interventions() works independently of fit_outcomes()", {
   task <- make_task_with_folds()
   task <- define_interventions(task, static_intervention(1, label = "static"))
-  task <- add_models(task, treatments(learners = lrn, metalearners = mtl), outcomes(learners = lrn, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn, metalearner = mtl), outcomes(learners = lrn, metalearner = mtl))
 
-  # Do NOT call fit_outcomes — go straight to fit_interventions
+  # Do NOT call fit_outcomes â€” go straight to fit_interventions
   task <- fit_interventions(task)
 
   expect_true(!is.null(task$clever_covariates))
@@ -236,9 +263,9 @@ test_that("fit_interventions() works independently of fit_outcomes()", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # MTP vs non-MTP equivalence for a static intervention
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("2N density ratio recovers analytic ratio for continuous shift MTP", {
   set.seed(42L)
@@ -256,8 +283,8 @@ test_that("2N density ratio recovers analytic ratio for continuous shift MTP", {
   true_r <- dnorm(A, mu_w + delta, 1) / dnorm(A, mu_w, 1)
 
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -268,9 +295,9 @@ test_that("2N density ratio recovers analytic ratio for continuous shift MTP", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn_glm, metalearners = mtl),
-    outcomes(learners = lrn_glm, metalearners = mtl),
-    mtp(learners = lrn_glm, metalearners = mtl)
+    treatments(learners = lrn_glm, metalearner = mtl),
+    outcomes(learners = lrn_glm, metalearner = mtl),
+    mtp(learners = lrn_glm, metalearner = mtl)
   )
   task <- fit_interventions(task)
 
@@ -283,9 +310,9 @@ test_that("2N density ratio recovers analytic ratio for continuous shift MTP", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Complex pipeline: two outcomes, censoring, adjustment sets
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("full pipeline: two outcomes, censoring, adjustment sets", {
   set.seed(42L)
@@ -303,9 +330,9 @@ test_that("full pipeline: two outcomes, censoring, adjustment sets", {
   d$Y2 <- rnorm(n) + 0.5 * d$A
 
   task <- initiate_study(d, confounders = c(X1, X2, X3), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y1", Y1, censoring = C, adjustment_set = c("X1", "X2")) |>
-    add_outcome("Y2", Y2)
+    add_treatment(A) |>
+    add_outcome(Y1, "Y1", censoring = C, adjustment_set = c("X1", "X2")) |>
+    add_outcome(Y2, "Y2")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -314,10 +341,10 @@ test_that("full pipeline: two outcomes, censoring, adjustment sets", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn, metalearners = mtl),
-    outcomes(learners = lrn, metalearners = mtl),
-    censoring(learners = lrn, metalearners = mtl),
-    mtp(learners = lrn, metalearners = mtl)
+    treatments(learners = lrn, metalearner = mtl),
+    outcomes(learners = lrn, metalearner = mtl),
+    censoring(learners = lrn, metalearner = mtl),
+    mtp(learners = lrn, metalearner = mtl)
   )
 
   # intervened_data should already be populated

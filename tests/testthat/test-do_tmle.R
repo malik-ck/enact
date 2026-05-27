@@ -1,4 +1,4 @@
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 make_data <- function(n = 100L) {
   set.seed(42L)
   data.frame(
@@ -16,8 +16,8 @@ mtl <- enfold::mtl_selector("sel")
 make_task <- function(d = NULL) {
   if (is.null(d)) d <- make_data()
   initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
 }
 
 make_fitted_task <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
@@ -30,8 +30,8 @@ make_fitted_task <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn_glm, metalearners = mtl),
-    outcomes(learners = lrn_glm, metalearners = mtl)
+    treatments(learners = lrn_glm, metalearner = mtl),
+    outcomes(learners = lrn_glm, metalearner = mtl)
   )
   task <- fit_interventions(task)
   task <- fit_outcomes(task)
@@ -39,18 +39,18 @@ make_fitted_task <- function(d = NULL, inner_cv = 2L, outer_cv = 2L) {
 }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # all_outcomes()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("all_outcomes() returns NULL", {
   expect_null(all_outcomes())
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # generate_fwb_weights()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("generate_fwb_weights() produces correct dimensions", {
   w <- generate_fwb_weights(50L, 100L)
@@ -91,9 +91,9 @@ test_that("generate_fwb_weights() clustered: obs in same cluster get same weight
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # fwb_targeting()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("fwb_targeting() returns correct dimensions", {
   set.seed(1L)
@@ -140,9 +140,9 @@ test_that("fwb_targeting() respects obs_idx for censoring", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # summarize_fwb()
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("summarize_fwb() produces correct structure", {
   set.seed(4L)
@@ -156,9 +156,36 @@ test_that("summarize_fwb() produces correct structure", {
   )
 
   expect_s3_class(df, "data.frame")
-  expect_true(all(c("Contrast", "Estimate", "SE", "Lower_CI", "Upper_CI") %in% names(df)))
+  expect_true(all(c("Contrast", "Estimate", "SE", "Lower_CI", "Upper_CI", "P_value") %in% names(df)))
   # 2 TSMs + 1 contrast (treat vs control)
   expect_equal(nrow(df), 3L)
+  expect_true(all(df$P_value >= 0 & df$P_value <= 1))
+})
+
+test_that("summarize_fwb() P_value is ~1 when bootstrap straddles 0", {
+  set.seed(7L)
+  n_b <- 4000L
+  # Boot samples centered on 0 -> p-value should be close to 1
+  tsm_mat <- matrix(rnorm(n_b * 2, mean = 0, sd = 0.1), ncol = 2)
+  colnames(tsm_mat) <- c("a", "b")
+  df <- summarize_fwb(
+    tsm_mat, contrasts = list(ate()), ref_idx = 1L,
+    intervention_labels = c("a", "b"), ci_method = "nonparametric"
+  )
+  expect_true(all(df$P_value > 0.5))
+})
+
+test_that("summarize_fwb() P_value is ~0 when bootstrap is far from 0", {
+  set.seed(8L)
+  n_b <- 4000L
+  tsm_mat <- matrix(rnorm(n_b * 2, mean = c(5, 5), sd = 0.1), ncol = 2)
+  colnames(tsm_mat) <- c("a", "b")
+  df <- summarize_fwb(
+    tsm_mat, contrasts = list(ate()), ref_idx = 1L,
+    intervention_labels = c("a", "b"), ci_method = "nonparametric"
+  )
+  tsm_rows <- grepl("TSM", df$Contrast)
+  expect_true(all(df$P_value[tsm_rows] < 0.05))
 })
 
 test_that("summarize_fwb() includes contrast labels", {
@@ -189,7 +216,7 @@ test_that("summarize_fwb() parametric CI includes SE", {
   )
 
   expect_true(all(df$SE > 0))
-  # Parametric CI: estimate ± 1.96 * SE (tolerance for floating-point)
+  # Parametric CI: estimate Â± 1.96 * SE (tolerance for floating-point)
   expect_true(all(abs(df$Upper_CI - (df$Estimate + 1.96 * df$SE)) < 1e-8))
   expect_true(all(abs(df$Lower_CI - (df$Estimate - 1.96 * df$SE)) < 1e-8))
 })
@@ -212,15 +239,15 @@ test_that("summarize_fwb() handles multiple contrasts", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — input validation
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” input validation
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() rejects task without clever covariates", {
   task <- make_task()
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "iv"))
-  task <- add_models(task, outcomes(learners = lrn_glm, metalearners = mtl))
+  task <- add_models(task, outcomes(learners = lrn_glm, metalearner = mtl))
   task <- fit_outcomes(task)
 
   expect_error(do_tmle(task, "Y", gaussian()), "clever covariates")
@@ -230,7 +257,7 @@ test_that("do_tmle() rejects task without outcome predictions", {
   task <- make_task()
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(task, static_intervention(1, label = "iv"))
-  task <- add_models(task, treatments(learners = lrn_glm, metalearners = mtl), outcomes(learners = lrn_glm, metalearners = mtl))
+  task <- add_models(task, treatments(learners = lrn_glm, metalearner = mtl), outcomes(learners = lrn_glm, metalearner = mtl))
   task <- fit_interventions(task)
 
   expect_error(do_tmle(task, "Y", gaussian()), "outcome predictions")
@@ -252,9 +279,9 @@ test_that("do_tmle() rejects invalid ci_method", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — end-to-end
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” end-to-end
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() produces tmle_results", {
   task <- make_fitted_task()
@@ -283,9 +310,9 @@ test_that("do_tmle() with all_outcomes() targets all outcomes", {
     Y1 = rnorm(n), Y2 = rnorm(n)
   )
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y1", Y1) |>
-    add_outcome("Y2", Y2)
+    add_treatment(A) |>
+    add_outcome(Y1, "Y1") |>
+    add_outcome(Y2, "Y2")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -294,8 +321,8 @@ test_that("do_tmle() with all_outcomes() targets all outcomes", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn_glm, metalearners = mtl),
-    outcomes(learners = lrn_glm, metalearners = mtl)
+    treatments(learners = lrn_glm, metalearner = mtl),
+    outcomes(learners = lrn_glm, metalearner = mtl)
   )
   task <- fit_interventions(task)
   task <- fit_outcomes(task)
@@ -320,15 +347,15 @@ test_that("do_tmle() parametric CIs are symmetric around estimate", {
   task <- do_tmle(task, "Y", gaussian(), n_bstrap = 200L, ci_method = "parametric")
 
   df <- task$tmle_results$Y
-  # Upper - Estimate ≈ Estimate - Lower ≈ 1.96 * SE
+  # Upper - Estimate â‰ˆ Estimate - Lower â‰ˆ 1.96 * SE
   half_width <- df$Upper_CI - df$Estimate
   expect_true(all(abs(half_width - 1.96 * df$SE) < 1e-10))
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — keep_bootstrap_samples
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” keep_bootstrap_samples
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() does not store bootstrap by default", {
   task <- make_fitted_task()
@@ -348,9 +375,9 @@ test_that("do_tmle() stores bootstrap when requested", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — contrast labels
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” contrast labels
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() includes ATE label from ate() contrast", {
   task <- make_fitted_task()
@@ -373,9 +400,9 @@ test_that("do_tmle() works with multiple contrasts", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — clustering
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” clustering
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() works with cluster variable", {
   set.seed(42L)
@@ -387,8 +414,8 @@ test_that("do_tmle() works with cluster variable", {
     cl = sample(letters[1:4], n, replace = TRUE)
   )
   task <- initiate_study(d, confounders = c(X1, X2), cluster = cl, verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -397,8 +424,8 @@ test_that("do_tmle() works with cluster variable", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn_glm, metalearners = mtl),
-    outcomes(learners = lrn_glm, metalearners = mtl)
+    treatments(learners = lrn_glm, metalearner = mtl),
+    outcomes(learners = lrn_glm, metalearner = mtl)
   )
   task <- fit_interventions(task)
   task <- fit_outcomes(task)
@@ -409,9 +436,9 @@ test_that("do_tmle() works with cluster variable", {
 })
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# do_tmle() — binomial family
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# do_tmle() â€” binomial family
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 test_that("do_tmle() works with binomial outcome", {
   set.seed(42L)
@@ -422,8 +449,8 @@ test_that("do_tmle() works with binomial outcome", {
     Y = rbinom(n, 1L, 0.4)
   )
   task <- initiate_study(d, confounders = c(X1, X2), verbose = FALSE) |>
-    add_treatment("A", A) |>
-    add_outcome("Y", Y)
+    add_treatment(A) |>
+    add_outcome(Y, "Y")
   task <- add_cv_folds(task, inner_cv = 2L, outer_cv = 2L)
   task <- define_interventions(
     task,
@@ -432,8 +459,8 @@ test_that("do_tmle() works with binomial outcome", {
   )
   task <- add_models(
     task,
-    treatments(learners = lrn_glm, metalearners = mtl),
-    outcomes(learners = lrn_glm, metalearners = mtl)
+    treatments(learners = lrn_glm, metalearner = mtl),
+    outcomes(learners = lrn_glm, metalearner = mtl)
   )
   task <- fit_interventions(task)
   task <- fit_outcomes(task)

@@ -236,22 +236,15 @@ print.enact_task <- function(x, ...) {
     }
     for (nm in names(x$treatment_meta)) {
       m <- x$treatment_meta[[nm]]
-      # Handle nested format (from add): list(col = list(type=...))
-      # vs flat format: list(type=..., label_info=...)
-      if (!is.null(m$type)) {
+      grouped <- length(m) > 1L
+      for (col_nm in names(m)) {
+        col_label <- x$treatment_labels[[col_nm]] %||% col_nm
+        display <- if (grouped) sprintf("%s [group: %s]", col_label, nm) else col_label
         cat(sprintf(
           "    \u00b7 %-35s %s\n",
-          x$treatment_labels[[nm]],
-          type_tag(m$type)
+          display,
+          type_tag(m[[col_nm]]$type)
         ))
-      } else {
-        for (col_nm in names(m)) {
-          cat(sprintf(
-            "    \u00b7 %-35s %s\n",
-            x$treatment_labels[[nm]],
-            type_tag(m[[col_nm]]$type)
-          ))
-        }
       }
     }
   }
@@ -339,4 +332,29 @@ print.enact_task <- function(x, ...) {
 
   cat(paste(rep("\u2500", 50), collapse = ""), "\n")
   invisible(x)
+}
+
+
+#' @export
+summary.enact_task <- function(object, digits = 3L, ...) {
+  print_tmle_results(object$tmle_results, digits = digits)
+  invisible(object)
+}
+
+
+# Shared helper used by summary.enact_task and summary.enact_task_stripped.
+print_tmle_results <- function(tmle_results, digits = 3L) {
+  if (is.null(tmle_results) || length(tmle_results) == 0L) {
+    cat("No TMLE results \u2014 call `do_tmle()`.\n")
+    return(invisible(NULL))
+  }
+  for (nm in names(tmle_results)) {
+    cat(sprintf("\n\u2500\u2500 Outcome: %s %s\n",
+                nm, paste(rep("\u2500", max(0L, 40L - nchar(nm))), collapse = "")))
+    df <- tmle_results[[nm]]
+    num_cols <- vapply(df, is.numeric, logical(1L))
+    df[num_cols] <- lapply(df[num_cols], round, digits = digits)
+    print(df, row.names = FALSE)
+  }
+  invisible(NULL)
 }
